@@ -19,7 +19,6 @@ jobs:
       - run: pip install -r requirements.txt
       - run: python app.py
         env:
-          OANDA_API_KEY: ${{ secrets.OANDA_API_KEY }}
-          OANDA_ENV: ${{ secrets.OANDA_ENV }}
+          TWELVEDATA_API_KEY: ${{ secrets.TWELVEDATA_API_KEY }}
           LINE_CHANNEL_ACCESS_TOKEN: ${{ secrets.LINE_CHANNEL_ACCESS_TOKEN }}
           LINE_USER_ID: ${{ secrets.LINE_USER_ID }}
