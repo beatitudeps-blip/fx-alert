@@ -8,7 +8,7 @@ TWELVEDATA_API_KEY = os.environ["TWELVEDATA_API_KEY"]
 LINE_TOKEN = os.environ["LINE_CHANNEL_ACCESS_TOKEN"]
 LINE_USER_ID = os.environ["LINE_USER_ID"]
 
-SYMBOL = "USD/JPY"
+SYMBOLS = ["USD/JPY", "EUR/JPY", "GBP/JPY"]
 EMA_PERIOD = 20
 ATR_PERIOD = 14
 
@@ -147,32 +147,48 @@ def send_line(msg: str):
 
 
 def main():
-    print(f"[{SYMBOL}] シグナルチェック開始...")
+    print("=== V2シグナルチェック開始 ===")
+    signals_found = []
 
-    # データ取得
-    h4 = fetch_data(SYMBOL, "4h", 200)
-    d1 = fetch_data(SYMBOL, "1day", 100)
+    for symbol in SYMBOLS:
+        print(f"\n[{symbol}] チェック中...")
 
-    print(f"4H足: {len(h4)}本, 日足: {len(d1)}本取得")
+        try:
+            # データ取得
+            h4 = fetch_data(symbol, "4h", 200)
+            d1 = fetch_data(symbol, "1day", 100)
 
-    # シグナル判定
-    result = check_signal(h4, d1)
+            print(f"  4H足: {len(h4)}本, 日足: {len(d1)}本取得")
 
-    if result["signal"]:
-        # シグナル成立 - LINE通知
-        msg = (
-            f"🚨 {SYMBOL} V2シグナル検出\n"
-            f"パターン: {result['pattern']}\n"
-            f"価格: {result['close']:.3f}\n"
-            f"EMA20: {result['ema20']:.3f}\n"
-            f"ATR: {result['atr']:.3f}\n"
-            f"時刻: {result['datetime']}"
-        )
-        send_line(msg)
-        print("✅ シグナル成立 - 通知送信")
-        print(msg)
+            # シグナル判定
+            result = check_signal(h4, d1)
+
+            if result["signal"]:
+                print(f"  ✅ シグナル検出")
+                signals_found.append((symbol, result))
+            else:
+                print(f"  ❌ {result['reason']}")
+
+        except Exception as e:
+            print(f"  ⚠️ エラー: {e}")
+
+    # LINE通知（シグナルがあった通貨のみ）
+    if signals_found:
+        print(f"\n=== {len(signals_found)}件のシグナルを通知 ===")
+        for symbol, result in signals_found:
+            msg = (
+                f"🚨 {symbol} V2シグナル検出\n"
+                f"パターン: {result['pattern']}\n"
+                f"価格: {result['close']:.3f}\n"
+                f"EMA20: {result['ema20']:.3f}\n"
+                f"ATR: {result['atr']:.3f}\n"
+                f"時刻: {result['datetime']}"
+            )
+            send_line(msg)
+            print(f"✅ {symbol} 通知送信完了")
     else:
-        print(f"❌ シグナルなし - {result['reason']}")
+        print("\n=== シグナルなし ===")
+        print("3通貨すべてで条件不成立")
 
 
 if __name__ == "__main__":
