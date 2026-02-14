@@ -1,0 +1,25 @@
+name: fx-alert
+
+on:
+  # JST 01:05,05:05,09:05,13:05,17:05,21:05 に相当
+  # cron は UTC なので -9h
+  schedule:
+    - cron: "5 16,20,0,4,8,12 * * *"
+  workflow_dispatch:
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -r requirements.txt
+      - run: python app.py
+        env:
+          OANDA_API_KEY: ${{ secrets.OANDA_API_KEY }}
+          OANDA_ENV: ${{ secrets.OANDA_ENV }}
+          LINE_CHANNEL_ACCESS_TOKEN: ${{ secrets.LINE_CHANNEL_ACCESS_TOKEN }}
+          LINE_USER_ID: ${{ secrets.LINE_USER_ID }}
