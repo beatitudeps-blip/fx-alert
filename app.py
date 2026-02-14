@@ -23,10 +23,15 @@ def fetch_h4():
     }
 
     r = requests.get(url, params=params, timeout=20)
+    r.raise_for_status()
     data = r.json()
 
     df = pd.DataFrame(data["values"])
-    df = df.astype(float)
+    # datetimeを除く数値カラムをfloatに変換
+    df["open"] = df["open"].astype(float)
+    df["high"] = df["high"].astype(float)
+    df["low"] = df["low"].astype(float)
+    df["close"] = df["close"].astype(float)
     df = df.sort_index(ascending=False)
     return df
 
