@@ -2,3 +2,5 @@ requests
 pandas
 numpy
 matplotlib
+pyyaml
+python-dotenv
