@@ -296,7 +296,7 @@ ATR: {atr:.3f}
                 msg += self._format_signal_block(result, next_dt, equity_jpy, risk_pct)
                 msg += "\n" + "="*40 + "\n\n"
 
-        # 見送りブロック（圧縮、理由コード付き）
+        # 見送りブロック（圧縮、理由コード + 相場状態サマリー）
         if include_skips:
             skip_lines = []
             for result in results:
@@ -304,6 +304,14 @@ ATR: {atr:.3f}
                     skip_count += 1
                     symbol = result["symbol"]
                     reason = result.get("reason", "不明")
+
+                    # 相場状態サマリー
+                    close = result.get("close", 0.0)
+                    ema20 = result.get("ema20", 0.0)
+                    atr = result.get("atr", 0.0)
+                    gap_pips = result.get("ema_gap_pips", 0.0)
+                    gap_ratio = result.get("ema_gap_atr_ratio", 0.0)
+                    state = result.get("market_state", "不明")
 
                     # 理由コードを抽出して簡潔表示
                     if compress_skip_lines:
@@ -335,6 +343,10 @@ ATR: {atr:.3f}
                             # 理由を20文字に短縮
                             short_reason = reason[:20] + "..." if len(reason) > 20 else reason
                             skip_lines.append(f"・{symbol}: {short_reason}")
+
+                        # 相場状態サマリー追加
+                        if close > 0 and ema20 > 0 and atr > 0:
+                            skip_lines.append(f"  → {close:.3f} / EMA {ema20:.3f} / 乖離 {gap_pips:.1f}pips({gap_ratio:.2f}R) / {state}")
                     else:
                         skip_lines.append(f"【{symbol}】見送り\n理由: {reason}")
 

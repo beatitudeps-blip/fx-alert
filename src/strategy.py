@@ -70,20 +70,13 @@ def check_signal(h4: pd.DataFrame, d1: pd.DataFrame) -> dict:
             "signal": "LONG" | "SHORT" | None,
             "reason": str,
             "pattern": str (optional),
-            "close": float (optional),
-            "ema20": float (optional),
-            "atr": float (optional),
-            "datetime": datetime (optional)
+            "close": float (always),
+            "ema20": float (always),
+            "atr": float (always),
+            "datetime": datetime (always)
         }
     """
-    # LONG環境チェック
-    long_env = check_daily_environment_long(d1)
-    short_env = check_daily_environment_short(d1)
-
-    if not long_env and not short_env:
-        return {"signal": None, "reason": "日足環境NG（トレンドなし）"}
-
-    # 4H足の計算
+    # 4H足の計算（見送り時にも必要なので最初に実行）
     h4 = h4.copy()
     h4["ema20"] = calculate_ema(h4["close"], EMA_PERIOD)
     h4["atr14"] = calculate_atr(h4, ATR_PERIOD)
@@ -91,28 +84,40 @@ def check_signal(h4: pd.DataFrame, d1: pd.DataFrame) -> dict:
     latest = h4.iloc[-1]
     prev = h4.iloc[-2]
 
+    # 基本情報（常に返す）
+    base_info = {
+        "close": latest["close"],
+        "ema20": latest["ema20"],
+        "atr": latest["atr14"],
+        "datetime": latest["datetime"]
+    }
+
+    # LONG環境チェック
+    long_env = check_daily_environment_long(d1)
+    short_env = check_daily_environment_short(d1)
+
+    if not long_env and not short_env:
+        return {**base_info, "signal": None, "reason": "日足環境NG（トレンドなし）"}
+
     # LONGシグナルチェック
     if long_env:
         # EMAタッチチェック
         touch_ema = latest["low"] <= latest["ema20"] <= latest["high"]
         if not touch_ema:
-            return {"signal": None, "reason": "EMAタッチなし（LONG）"}
+            return {**base_info, "signal": None, "reason": "EMAタッチなし（LONG）"}
 
         # トリガーチェック
         is_engulfing = is_bullish_engulfing(prev, latest)
         is_hammer = is_bullish_hammer(latest)
 
         if not (is_engulfing or is_hammer):
-            return {"signal": None, "reason": "トリガーパターンなし（LONG）"}
+            return {**base_info, "signal": None, "reason": "トリガーパターンなし（LONG）"}
 
         pattern = "Bullish Engulfing" if is_engulfing else "Bullish Hammer"
         return {
+            **base_info,
             "signal": "LONG",
-            "pattern": pattern,
-            "close": latest["close"],
-            "ema20": latest["ema20"],
-            "atr": latest["atr14"],
-            "datetime": latest["datetime"]
+            "pattern": pattern
         }
 
     # SHORTシグナルチェック
@@ -120,23 +125,20 @@ def check_signal(h4: pd.DataFrame, d1: pd.DataFrame) -> dict:
         # EMAタッチチェック
         touch_ema = latest["low"] <= latest["ema20"] <= latest["high"]
         if not touch_ema:
-            return {"signal": None, "reason": "EMAタッチなし（SHORT）"}
+            return {**base_info, "signal": None, "reason": "EMAタッチなし（SHORT）"}
 
         # トリガーチェック
         is_engulfing = is_bearish_engulfing(prev, latest)
         is_hammer = is_bearish_hammer(latest)
 
         if not (is_engulfing or is_hammer):
-            return {"signal": None, "reason": "トリガーパターンなし（SHORT）"}
+            return {**base_info, "signal": None, "reason": "トリガーパターンなし（SHORT）"}
 
         pattern = "Bearish Engulfing" if is_engulfing else "Bearish Shooting Star"
         return {
+            **base_info,
             "signal": "SHORT",
-            "pattern": pattern,
-            "close": latest["close"],
-            "ema20": latest["ema20"],
-            "atr": latest["atr14"],
-            "datetime": latest["datetime"]
+            "pattern": pattern
         }
 
-    return {"signal": None, "reason": "条件不成立"}
+    return {**base_info, "signal": None, "reason": "条件不成立"}

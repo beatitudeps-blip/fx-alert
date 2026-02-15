@@ -104,7 +104,13 @@ def main():
             results.append({
                 "symbol": symbol,
                 "status": "SKIP",
-                "reason": signal["skip_reason"]
+                "reason": signal["skip_reason"],
+                "close": signal.get("close", 0.0),
+                "ema20": signal.get("ema20", 0.0),
+                "atr": signal.get("atr", 0.0),
+                "ema_gap_pips": signal.get("ema_gap_pips", 0.0),
+                "ema_gap_atr_ratio": signal.get("ema_gap_atr_ratio", 0.0),
+                "market_state": signal.get("market_state", "不明")
             })
         else:
             # シグナル検出
@@ -122,15 +128,16 @@ def main():
                 "status": "SIGNAL",
                 "side": signal["signal"],
                 "pattern": signal["pattern"],
-                "entry_price": signal["entry_price"],
-                "sl_price": signal["sl_price"],
-                "tp1_price": signal["tp1_price"],
-                "tp2_price": signal["tp2_price"],
+                "entry_price_mid": signal["entry_price"],
+                "sl_price_mid": signal["sl_price"],
+                "tp1_price_mid": signal["tp1_price"],
+                "tp2_price_mid": signal["tp2_price"],
                 "sl_pips": signal["sl_pips"],
                 "lots": signal["lots"],
                 "units": signal["units"],
                 "risk_jpy": signal["risk_jpy"],
-                "atr": signal["atr"]
+                "atr": signal.get("atr", 0.0),
+                "ema20": signal.get("ema20", 0.0)
             })
 
     # 通知送信（シグナルがある場合、またはskipがある場合）

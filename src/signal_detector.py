@@ -134,22 +134,47 @@ def detect_single_signal(
     # 最新の確定足でシグナルチェック
     signal_result = check_signal(h4_past, d1_past)
 
+    # 相場状態サマリー情報（常に取得）
+    close = signal_result.get("close", 0.0)
+    ema20 = signal_result.get("ema20", 0.0)
+    atr = signal_result.get("atr", 0.0)
+    bar_dt = signal_result.get("datetime", datetime.now(tz))
+
+    # EMAとの乖離計算
+    ema_gap_pips = abs(close - ema20) * 100  # pips
+    ema_gap_atr_ratio = ema_gap_pips / (atr * 100) if atr > 0 else 0.0  # ATR比
+
+    # 市況分類
+    if ema_gap_atr_ratio < 0.5:
+        market_state = "押し目圏"
+    elif ema_gap_atr_ratio < 1.0:
+        market_state = "軽い乖離"
+    else:
+        market_state = "乖離大"
+
+    # 相場状態サマリー
+    market_summary = {
+        "close": close,
+        "ema20": ema20,
+        "atr": atr,
+        "ema_gap_pips": ema_gap_pips,
+        "ema_gap_atr_ratio": ema_gap_atr_ratio,
+        "market_state": market_state
+    }
+
     if signal_result["signal"] is None:
         # シグナルなし - スキップ理由を返す
-        # 確定した最新足の時刻を使用
-        bar_dt = h4_past.iloc[-1]["datetime"] if len(h4_past) > 0 else datetime.now(tz)
         return {
             "symbol": symbol,
             "signal": None,
             "bar_dt": bar_dt,
-            "skip_reason": signal_result.get("reason", "条件不成立")
+            "skip_reason": signal_result.get("reason", "条件不成立"),
+            **market_summary
         }
 
     signal_type = signal_result["signal"]  # "LONG" or "SHORT"
     pattern = signal_result.get("pattern", "Unknown")
-    bar_dt = signal_result["datetime"]  # シグナル確定時刻
-    atr = signal_result["atr"]
-    close_price = signal_result["close"]
+    close_price = close
 
     # エントリー価格：次の4H足の始値（= 現在の終値）
     entry_price = close_price
@@ -163,30 +188,30 @@ def detect_single_signal(
         sl_price = entry_price + sl_distance_price
 
     # ポジションサイジング計算
-    position_result = calculate_position_size_strict(
-        symbol=symbol,
-        side=signal_type,
+    units, risk_jpy, is_valid = calculate_position_size_strict(
+        equity_jpy=current_equity,
         entry_price=entry_price,
         sl_price=sl_price,
-        equity=current_equity,
         risk_pct=risk_pct,
-        config=config
+        config=config,
+        symbol=symbol
     )
 
-    if not position_result["valid"]:
+    if not is_valid:
         # ポジションサイズ計算失敗
         return {
             "symbol": symbol,
             "signal": signal_type,
             "pattern": pattern,
             "bar_dt": bar_dt,
-            "skip_reason": position_result["reason"]
+            "skip_reason": "最小ロット未満またはリスク超過",
+            **market_summary
         }
 
-    units = position_result["units"]
-    lots = units_to_lots(units, config.lot_size)
-    risk_jpy = position_result["risk_jpy"]
-    sl_pips = position_result["sl_pips"]
+    lots = units_to_lots(units, config, symbol)
+
+    # SL pips計算
+    sl_pips = abs(entry_price - sl_price) * 100
 
     # TP価格計算
     if signal_type == "LONG":
@@ -196,35 +221,21 @@ def detect_single_signal(
         tp1_price = entry_price - (sl_distance_price * tp1_r)
         tp2_price = entry_price - (sl_distance_price * tp2_r)
 
-    # スプレッドフィルターチェック
-    spread_ok = cost_model.check_spread_filter(
-        symbol=symbol,
-        entry_dt=bar_dt  # シグナル確定時刻でチェック
-    )
-
-    if not spread_ok:
-        return {
-            "symbol": symbol,
-            "signal": signal_type,
-            "pattern": pattern,
-            "bar_dt": bar_dt,
-            "skip_reason": "spread_filter"
-        }
-
-    # メンテナンス時間チェック（エントリー予定時刻 = 次の4H足の始値時刻）
-    # シグナル確定から4時間後にエントリーすると仮定
+    # スプレッドフィルター + メンテナンス時間チェック
+    # エントリー予定時刻 = 次の4H足の始値時刻
     from datetime import timedelta
     entry_dt = bar_dt + timedelta(hours=4)
 
-    is_maintenance = cost_model.is_maintenance_time(entry_dt)
+    should_skip, skip_reason = cost_model.should_skip_entry(symbol, entry_dt)
 
-    if is_maintenance:
+    if should_skip:
         return {
             "symbol": symbol,
             "signal": signal_type,
             "pattern": pattern,
             "bar_dt": bar_dt,
-            "skip_reason": "maintenance"
+            "skip_reason": skip_reason,
+            **market_summary
         }
 
     # 全チェック通過：有効なシグナル
@@ -241,6 +252,6 @@ def detect_single_signal(
         "lots": round(lots, 1),
         "units": units,
         "risk_jpy": round(risk_jpy, 0),
-        "atr": round(atr, 3),
-        "skip_reason": None
+        "skip_reason": None,
+        **market_summary
     }
