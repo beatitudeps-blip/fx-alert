@@ -73,29 +73,97 @@ def main():
     print(f"リスク設定: {args.risk_pct*100:.1f}%")
     print(f"={'='*60}\n")
 
-    # TODO: シグナル検出ロジックを実装
-    # 現在は仮実装
-    print("⚠️ 注意: シグナル検出ロジックは未実装です")
-    print("   本番運用前に src/signal_detector.py を実装してください")
-    
-    # 仮の結果
-    results = []
-    for symbol in symbols:
-        print(f"[{symbol}] シグナルチェック中...")
-        # TODO: 実際のシグナル検出を実装
-        # results.append({
-        #     "symbol": symbol,
-        #     "status": "NO_SIGNAL",
-        #     "reason": "条件不一致"
-        # })
-        print(f"  ✅ チェック完了 (シグナルなし)")
+    # シグナル検出
+    print("📊 シグナル検出中...\n")
+    signals = detect_signals(
+        symbols=symbols,
+        config=config,
+        api_key=api_key,
+        current_equity=args.equity,
+        risk_pct=args.risk_pct,
+        atr_multiplier=args.atr_mult,
+        tp1_r=args.tp1_r,
+        tp2_r=args.tp2_r,
+        use_cache=False  # 本番では最新データを取得
+    )
 
-    # 通知送信（シグナルがある場合）
-    if results and not args.dry_run:
-        # TODO: バッチメッセージ作成・送信
-        # msg = notifier.create_batch_message(...)
-        # notifier.send_line(msg)
-        pass
+    # 結果を整形
+    results = []
+    bar_dt = None  # 確定4H足時刻（最初のシグナルから取得）
+
+    for signal in signals:
+        symbol = signal["symbol"]
+
+        # bar_dt を保存（全通貨ペアで同じはず）
+        if bar_dt is None and signal.get("bar_dt"):
+            bar_dt = signal["bar_dt"]
+
+        if signal.get("skip_reason"):
+            # 見送り
+            print(f"[{symbol}] ⏭️  見送り: {signal['skip_reason']}")
+            results.append({
+                "symbol": symbol,
+                "status": "SKIP",
+                "reason": signal["skip_reason"]
+            })
+        else:
+            # シグナル検出
+            print(f"[{symbol}] 🔔 {signal['signal']}シグナル検出!")
+            print(f"  パターン: {signal['pattern']}")
+            print(f"  エントリー: {signal['entry_price']:.3f}")
+            print(f"  SL: {signal['sl_price']:.3f} ({signal['sl_pips']:.1f}pips)")
+            print(f"  TP1: {signal['tp1_price']:.3f}")
+            print(f"  TP2: {signal['tp2_price']:.3f}")
+            print(f"  ロット: {signal['lots']:.1f} ({signal['units']}通貨)")
+            print(f"  リスク: {signal['risk_jpy']:,.0f}円")
+
+            results.append({
+                "symbol": symbol,
+                "status": "SIGNAL",
+                "side": signal["signal"],
+                "pattern": signal["pattern"],
+                "entry_price": signal["entry_price"],
+                "sl_price": signal["sl_price"],
+                "tp1_price": signal["tp1_price"],
+                "tp2_price": signal["tp2_price"],
+                "sl_pips": signal["sl_pips"],
+                "lots": signal["lots"],
+                "units": signal["units"],
+                "risk_jpy": signal["risk_jpy"],
+                "atr": signal["atr"]
+            })
+
+    # 通知送信（シグナルがある場合、またはskipがある場合）
+    if results and bar_dt:
+        # バッチメッセージ作成
+        msg = notifier.create_batch_message(
+            run_dt=run_dt,
+            bar_dt=bar_dt,
+            results=results,
+            equity_jpy=args.equity,
+            risk_pct=args.risk_pct
+        )
+
+        if msg:
+            if not args.dry_run:
+                # 実際に送信
+                success = notifier.send_line(msg)
+                if success:
+                    print("\n✅ LINE通知を送信しました")
+                    notifier._mark_bar_sent(bar_dt)
+                else:
+                    print("\n❌ LINE通知の送信に失敗しました")
+            else:
+                # Dry run: メッセージだけ表示
+                print("\n" + "="*60)
+                print("📱 DRY RUN: 以下のメッセージが送信されます")
+                print("="*60)
+                print(msg)
+                print("="*60)
+        else:
+            print("\n✅ 重複通知のためスキップしました")
+    else:
+        print("\n✅ 全通貨ペアでシグナルなし")
 
     print(f"\n{'='*60}")
     print(f"✅ FXアラート実行完了")
