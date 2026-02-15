@@ -83,14 +83,14 @@ TP2: 3.0R FIXED_R
 
 ## 📋 本番運用開始チェックリスト
 
-- [ ] GitHub Secretsに認証情報登録
-- [ ] LINE公式アカウント友だち追加
-- [ ] src/signal_detector.py 実装
-- [ ] Dry runテスト成功
-- [ ] 実際のLINE通知受信確認
-- [ ] notification_state.json自動コミット確認
+- [x] GitHub Secretsに認証情報登録 ✅
+- [x] LINE公式アカウント友だち追加 ✅
+- [x] src/signal_detector.py 実装 ✅
+- [x] Dry runテスト成功 ✅
+- [x] **実際のLINE通知受信確認** ✅ **← 完了！**
+- [ ] notification_state.json自動コミット確認（次回自動実行時）
 - [ ] みんなのFXに50万円入金
-- [ ] 本番運用開始
+- [ ] 本番運用開始（自動実行: JST 0,4,8,12,16,20時）
 
 ---
 
