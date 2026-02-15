@@ -1,24 +1,115 @@
-name: fx-alert
+name: FX Alert - 4H Signal Detection
 
+# 4H足確定後に自動実行（JST 0時,4時,8時,12時,16時,20時）
+# UTC = JST -9時間 → 15時,19時,23時,3時,7時,11時
+# 5分後に実行して確定を確実にする
 on:
-  # JST 01:05,05:05,09:05,13:05,17:05,21:05 に相当
-  # cron は UTC なので -9h
   schedule:
-    - cron: "5 16,20,0,4,8,12 * * *"
-  workflow_dispatch:
+    - cron: '5 15,19,23,3,7,11 * * *'  # UTC時刻
+
+  workflow_dispatch:  # 手動実行も可能
+    inputs:
+      dry_run:
+        description: 'Dry run mode (no LINE notification)'
+        required: false
+        default: 'false'
+
+env:
+  TZ: Asia/Tokyo
+  PYTHON_VERSION: '3.9'
 
 jobs:
-  run:
+  fx-alert:
+    name: FX Signal Check & Notify
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+
+    permissions:
+      contents: write  # notification_state.json をコミットするため
+
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      # 1. リポジトリをチェックアウト
+      - name: Checkout repository
+        uses: actions/checkout@v4
         with:
-          python-version: "3.11"
-      - run: pip install -r requirements-app.txt
-      - run: python app.py
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      # 2. Pythonセットアップ
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      # 3. 依存関係インストール
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      # 4. FXアラートチェック実行
+      - name: Run FX Alert Check
         env:
           TWELVEDATA_API_KEY: ${{ secrets.TWELVEDATA_API_KEY }}
           LINE_CHANNEL_ACCESS_TOKEN: ${{ secrets.LINE_CHANNEL_ACCESS_TOKEN }}
           LINE_USER_ID: ${{ secrets.LINE_USER_ID }}
+          DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
+        run: |
+          echo "=========================================="
+          echo "FX Alert System - 4H Signal Check"
+          echo "=========================================="
+          echo "実行時刻 (JST): $(TZ=Asia/Tokyo date '+%Y-%m-%d %H:%M:%S')"
+          echo "実行時刻 (UTC): $(date -u '+%Y-%m-%d %H:%M:%S')"
+          echo "Dry Run: ${DRY_RUN}"
+          echo "=========================================="
+
+          python scripts/run_fx_alert.py \
+            --symbols "EUR/JPY,USD/JPY" \
+            --config config/minnafx.yaml \
+            --equity 500000 \
+            --risk-pct 0.005 \
+            --atr-mult 1.0 \
+            --tp1-r 1.5 \
+            --tp2-r 3.0 \
+            --tp2-mode FIXED_R \
+            $(if [ "${DRY_RUN}" = "true" ]; then echo "--dry-run"; fi)
+
+      # 5. notification_state.json を自動コミット
+      - name: Commit notification state
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          if [ -f data/notification_state.json ]; then
+            git add data/notification_state.json
+            
+            if git diff --staged --quiet; then
+              echo "✅ 通知状態に変更なし"
+            else
+              git commit -m "Update notification state [skip ci]" -m "Updated at: $(TZ=Asia/Tokyo date '+%Y-%m-%d %H:%M:%S JST')"
+              git push
+              echo "✅ 通知状態を保存しました"
+            fi
+          else
+            echo "⚠️ notification_state.json が見つかりません"
+          fi
+
+      # 6. エラー時のログ保存
+      - name: Upload logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: error-logs-${{ github.run_id }}
+          path: |
+            logs/
+            data/notification_state.json
+          retention-days: 7
+
+      # 7. 実行サマリー
+      - name: Job Summary
+        if: always()
+        run: |
+          echo "## FX Alert実行結果" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **実行時刻 (JST)**: $(TZ=Asia/Tokyo date '+%Y-%m-%d %H:%M:%S')" >> $GITHUB_STEP_SUMMARY
+          echo "- **ステータス**: ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Dry Run**: ${{ github.event.inputs.dry_run || 'false' }}" >> $GITHUB_STEP_SUMMARY

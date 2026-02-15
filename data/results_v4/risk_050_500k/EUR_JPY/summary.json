@@ -1,0 +1,329 @@
+{
+  "start_date": "2024-01-01",
+  "end_date": "2026-02-14",
+  "initial_equity": 500000.0,
+  "final_equity": 574051.6388177468,
+  "total_trades": 105,
+  "wins": 51,
+  "losses": 54,
+  "win_rate": 0.4857142857142857,
+  "total_pnl_gross": 79547.63881774673,
+  "total_pnl_net": 74051.63881774673,
+  "total_cost": 5496.0,
+  "pf_gross": 1.7115161478720724,
+  "pf_net": 1.6465348669681383,
+  "avg_win_net": 3697.8005181388808,
+  "avg_loss_net": -2121.0405112469653,
+  "expectancy_net": 705.2537030261601,
+  "avg_r_multiple": 0.31307793417163704,
+  "max_drawdown_close_based": 0.028316214258061665,
+  "per_symbol": {
+    "EUR/JPY": {
+      "count": 105,
+      "total_pnl_net": 74051.63881774673,
+      "win_rate": 0.4857142857142857,
+      "avg_pnl_net": 705.2537030261598,
+      "avg_win": 3697.8005181388803,
+      "avg_loss": -2121.040511246965
+    }
+  },
+  "per_side": {
+    "LONG": {
+      "count": 72,
+      "total_pnl_net": 70050.93215454358,
+      "win_rate": 0.5277777777777778,
+      "avg_pnl_net": 972.9296132575502,
+      "avg_win": 3786.300789858907,
+      "avg_loss": -2171.426407649849
+    },
+    "SHORT": {
+      "count": 33,
+      "total_pnl_net": 4000.706663203159,
+      "win_rate": 0.3939393939393939,
+      "avg_pnl_net": 121.23353524858051,
+      "avg_win": 3439.1074161880283,
+      "avg_loss": -2035.3844873620612
+    }
+  },
+  "per_exit_reason": {
+    "TP2": {
+      "count": 36,
+      "total_pnl_net": 165800.17316805464,
+      "win_rate": 1.0,
+      "avg_pnl_net": 4605.560365779294,
+      "avg_win": 4605.560365779294,
+      "avg_loss": 0.0
+    },
+    "BE": {
+      "count": 15,
+      "total_pnl_net": 22787.653257028287,
+      "win_rate": 1.0,
+      "avg_pnl_net": 1519.1768838018859,
+      "avg_win": 1519.1768838018859,
+      "avg_loss": 0.0
+    },
+    "SL": {
+      "count": 54,
+      "total_pnl_net": -114536.18760733612,
+      "win_rate": 0.0,
+      "avg_pnl_net": -2121.040511246965,
+      "avg_win": 0.0,
+      "avg_loss": -2121.040511246965
+    }
+  },
+  "risk_violations_count": 0,
+  "risk_violations": [],
+  "monthly_returns": [
+    {
+      "month": "2024-01",
+      "trades": 6,
+      "pnl_net": 4.614056320590862,
+      "equity": 500004.61405632057,
+      "return_pct": 0.0009228112641181724
+    },
+    {
+      "month": "2024-02",
+      "trades": 6,
+      "pnl_net": 3747.1530327496093,
+      "equity": 503751.76708907017,
+      "return_pct": 0.7494306065499219
+    },
+    {
+      "month": "2024-03",
+      "trades": 5,
+      "pnl_net": -365.2891610689603,
+      "equity": 503386.4779280012,
+      "return_pct": -0.07305783221379206
+    },
+    {
+      "month": "2024-04",
+      "trades": 7,
+      "pnl_net": 12615.975289860848,
+      "equity": 516002.45321786206,
+      "return_pct": 2.5231950579721696
+    },
+    {
+      "month": "2024-05",
+      "trades": 4,
+      "pnl_net": -8468.399101099485,
+      "equity": 507534.0541167626,
+      "return_pct": -1.6936798202198968
+    },
+    {
+      "month": "2024-06",
+      "trades": 5,
+      "pnl_net": -122.69649927023784,
+      "equity": 507411.3576174924,
+      "return_pct": -0.024539299854047566
+    },
+    {
+      "month": "2024-07",
+      "trades": 3,
+      "pnl_net": 7079.941230166687,
+      "equity": 514491.2988476591,
+      "return_pct": 1.4159882460333375
+    },
+    {
+      "month": "2024-08",
+      "trades": 6,
+      "pnl_net": -4595.090430372615,
+      "equity": 509896.20841728646,
+      "return_pct": -0.919018086074523
+    },
+    {
+      "month": "2024-09",
+      "trades": 5,
+      "pnl_net": 2756.0198101420274,
+      "equity": 512652.2282274285,
+      "return_pct": 0.5512039620284055
+    },
+    {
+      "month": "2024-10",
+      "trades": 3,
+      "pnl_net": 5681.461065832227,
+      "equity": 518333.68929326074,
+      "return_pct": 1.1362922131664455
+    },
+    {
+      "month": "2024-11",
+      "trades": 4,
+      "pnl_net": -2097.7839416879015,
+      "equity": 516235.90535157284,
+      "return_pct": -0.4195567883375803
+    },
+    {
+      "month": "2024-12",
+      "trades": 2,
+      "pnl_net": 1997.6861332724836,
+      "equity": 518233.5914848453,
+      "return_pct": 0.3995372266544967
+    },
+    {
+      "month": "2025-01",
+      "trades": 3,
+      "pnl_net": 7003.359631773185,
+      "equity": 525236.9511166185,
+      "return_pct": 1.4006719263546372
+    },
+    {
+      "month": "2025-02",
+      "trades": 2,
+      "pnl_net": 10292.177407027086,
+      "equity": 535529.1285236456,
+      "return_pct": 2.058435481405417
+    },
+    {
+      "month": "2025-03",
+      "trades": 5,
+      "pnl_net": 3516.0620730038145,
+      "equity": 539045.1905966494,
+      "return_pct": 0.7032124146007629
+    },
+    {
+      "month": "2025-04",
+      "trades": 4,
+      "pnl_net": 2535.1587946735544,
+      "equity": 541580.3493913229,
+      "return_pct": 0.5070317589347109
+    },
+    {
+      "month": "2025-05",
+      "trades": 6,
+      "pnl_net": 4010.013360484634,
+      "equity": 545590.3627518076,
+      "return_pct": 0.8020026720969268
+    },
+    {
+      "month": "2025-06",
+      "trades": 2,
+      "pnl_net": 2636.500467888913,
+      "equity": 548226.8632196964,
+      "return_pct": 0.5273000935777826
+    },
+    {
+      "month": "2025-07",
+      "trades": 3,
+      "pnl_net": 7555.8624898327125,
+      "equity": 555782.7257095291,
+      "return_pct": 1.5111724979665424
+    },
+    {
+      "month": "2025-08",
+      "trades": 5,
+      "pnl_net": -7667.670498149522,
+      "equity": 548115.0552113797,
+      "return_pct": -1.5335340996299045
+    },
+    {
+      "month": "2025-09",
+      "trades": 1,
+      "pnl_net": 1596.1934369202338,
+      "equity": 549711.2486482998,
+      "return_pct": 0.31923868738404676
+    },
+    {
+      "month": "2025-10",
+      "trades": 3,
+      "pnl_net": 863.2090306149748,
+      "equity": 550574.4576789148,
+      "return_pct": 0.17264180612299496
+    },
+    {
+      "month": "2025-11",
+      "trades": 4,
+      "pnl_net": 8411.156179208001,
+      "equity": 558985.6138581227,
+      "return_pct": 1.6822312358416
+    },
+    {
+      "month": "2025-12",
+      "trades": 5,
+      "pnl_net": 2900.591022747589,
+      "equity": 561886.2048808703,
+      "return_pct": 0.5801182045495177
+    },
+    {
+      "month": "2026-01",
+      "trades": 4,
+      "pnl_net": 5505.699813387901,
+      "equity": 567391.9046942582,
+      "return_pct": 1.1011399626775802
+    },
+    {
+      "month": "2026-02",
+      "trades": 2,
+      "pnl_net": 6659.734123488411,
+      "equity": 574051.6388177467,
+      "return_pct": 1.3319468246976822
+    }
+  ],
+  "run_id": "risk_050_500k",
+  "symbol": "EUR/JPY",
+  "config_file": "config/minnafx.yaml",
+  "parameters": {
+    "initial_equity": 500000.0,
+    "risk_pct": 0.005,
+    "atr_multiplier": 1.0,
+    "tp1_r": 1.5,
+    "tp2_r": 3.0
+  },
+  "stats": {
+    "total_signals": 112,
+    "executed_trades": 105,
+    "skipped_signals": 7,
+    "maintenance_skips": 7,
+    "spread_filter_skips": 0,
+    "position_size_skips": 0,
+    "skipped_details": [
+      {
+        "signal_time": "2024-03-02 12:00:00+09:00",
+        "entry_time": "2024-03-02 16:00:00+09:00",
+        "symbol": "EUR/JPY",
+        "side": "LONG",
+        "reason": "maintenance"
+      },
+      {
+        "signal_time": "2024-06-29 08:00:00+09:00",
+        "entry_time": "2024-06-29 12:00:00+09:00",
+        "symbol": "EUR/JPY",
+        "side": "LONG",
+        "reason": "maintenance"
+      },
+      {
+        "signal_time": "2024-12-07 08:00:00+09:00",
+        "entry_time": "2024-12-07 12:00:00+09:00",
+        "symbol": "EUR/JPY",
+        "side": "SHORT",
+        "reason": "maintenance"
+      },
+      {
+        "signal_time": "2025-03-01 12:00:00+09:00",
+        "entry_time": "2025-03-01 16:00:00+09:00",
+        "symbol": "EUR/JPY",
+        "side": "SHORT",
+        "reason": "maintenance"
+      },
+      {
+        "signal_time": "2025-03-08 12:00:00+09:00",
+        "entry_time": "2025-03-08 16:00:00+09:00",
+        "symbol": "EUR/JPY",
+        "side": "LONG",
+        "reason": "maintenance"
+      },
+      {
+        "signal_time": "2025-05-31 08:00:00+09:00",
+        "entry_time": "2025-05-31 12:00:00+09:00",
+        "symbol": "EUR/JPY",
+        "side": "LONG",
+        "reason": "maintenance"
+      },
+      {
+        "signal_time": "2025-11-29 08:00:00+09:00",
+        "entry_time": "2025-11-29 12:00:00+09:00",
+        "symbol": "EUR/JPY",
+        "side": "LONG",
+        "reason": "maintenance"
+      }
+    ]
+  }
+}

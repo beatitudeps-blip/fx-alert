@@ -1,0 +1,90 @@
+# みんなのFX 設定ファイル
+broker: minnafx
+timezone: Asia/Tokyo
+
+trade_unit:
+  # 通常通貨ペア（USD/JPY, EUR/JPY, GBP/JPY）はこの定義
+  lot_size_units: 10000          # 1.0Lot = 10,000通貨
+  min_lot: 0.1                   # 最小 0.1Lot
+  lot_step: 0.1                  # 0.1Lot刻み
+  # 例外（HUF/JPYなど）は必要ならここに上書き定義を足す
+  overrides: {}
+
+execution:
+  slippage:
+    enabled: true
+    one_way_pips: 0.2            # 片道スリッページ（仮の初期値：要調整）
+  spread_filter:
+    enabled: true
+    # エントリー見送り閾値（例：固定帯の何倍を許容するか）
+    # 「絶対値」派なら max_spread_sen に切替えてもOK
+    max_multiplier_vs_advertised: 3.0
+
+spread:
+  # 原則固定（例外あり）: JST 08:00〜翌05:00
+  fixed_window:
+    start: "08:00"
+    end: "05:00"                 # 翌日
+    cross_midnight: true
+
+  # 拡大帯（広告表示の別スプレッドが示されている時間帯）
+  widened_windows:
+    # 7:10〜8:00（※月曜のみ7:00開始）
+    pre_open:
+      default_start: "07:10"
+      monday_start: "07:00"
+      end: "08:00"
+    # 翌5:00〜6:50
+    post_close:
+      start: "05:00"
+      end: "06:50"
+
+  # 3通貨の広告スプレッド（固定帯/拡大帯）— 各PDFの広告表示値
+  advertised_sen:
+    "USD/JPY":
+      fixed: 0.2
+      widened: 3.9
+    "EUR/JPY":
+      fixed: 0.4
+      widened: 9.9
+    "GBP/JPY":
+      fixed: 0.9
+      widened: 14.9
+
+maintenance:
+  # 日次メンテ中はレート配信停止/約定しない（FAQ）
+  daily:
+    # JST表記で統一（夏時間/冬時間は別レンジ）
+    standard_time:                # 米国標準時間（=日本の冬側）
+      monday:   [{ start: "06:00", end: "06:25" }]
+      tue_sun:  [{ start: "06:50", end: "07:10" }]
+    daylight_time:                # 米国夏時間
+      monday:   [{ start: "06:00", end: "06:25" }]
+      tue_sun:  [{ start: "05:50", end: "06:10" }]
+  weekly:
+    # 週次メンテ（土曜12:00-18:00）
+    - { dow: "sat", start: "12:00", end: "18:00" }
+
+swap:
+  # swapは「当該営業日終了後」に付与、付与判定はマーケットクローズ時
+  mode: ignore   # ignore | fixed_table | daily_csv
+  rollover_jst:
+    standard_time: "06:50"
+    daylight_time: "05:50"
+  fixed_table:
+    # 概算を使う場合：ここに 1Lot(=10,000通貨) あたりの1日分（円）を手で入れる
+    # 例：USD/JPY: { long: -xxx, short: +yyy } など
+    "USD/JPY": { long: 0, short: 0 }
+    "EUR/JPY": { long: 0, short: 0 }
+    "GBP/JPY": { long: 0, short: 0 }
+  daily_csv:
+    path: "data/swap_daily.csv"   # date,symbol,long,short（円/10kunits）
+
+notifier:
+  # LINE無料枠（200通/月）を守るための集約設定
+  aggregate_one_message: true           # 3通貨の結果を1通にまとめる
+  include_skips: true                   # 見送りも通知する（短く）
+  send_on_new_closed_bar_only: true     # 同一4Hバーでは再送しない
+  state_path: "data/notification_state.json"
+  max_text_length: 3500                 # LINE text上限は5000だが余裕を持つ
+  compress_skip_lines: true             # 見送りは1〜2行に圧縮
