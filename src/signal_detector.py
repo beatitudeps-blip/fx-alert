@@ -125,12 +125,19 @@ def detect_single_signal(
     if d1["datetime"].dt.tz is None:
         d1["datetime"] = d1["datetime"].dt.tz_localize("UTC").dt.tz_convert(tz)
 
+    # 現在時刻よりも古いデータのみ使用（確定した足のみ）
+    # TwelveData APIは未来のデータも返すことがあるため、フィルタリングが必要
+    now = datetime.now(tz)
+    h4_past = h4[h4["datetime"] < now].copy()
+    d1_past = d1[d1["datetime"] < now].copy()
+
     # 最新の確定足でシグナルチェック
-    signal_result = check_signal(h4, d1)
+    signal_result = check_signal(h4_past, d1_past)
 
     if signal_result["signal"] is None:
         # シグナルなし - スキップ理由を返す
-        bar_dt = h4.iloc[-1]["datetime"] if len(h4) > 0 else datetime.now(tz)
+        # 確定した最新足の時刻を使用
+        bar_dt = h4_past.iloc[-1]["datetime"] if len(h4_past) > 0 else datetime.now(tz)
         return {
             "symbol": symbol,
             "signal": None,
