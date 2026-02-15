@@ -85,6 +85,7 @@ def detect_signals(
                 tz=tz
             )
 
+            # シグナルあり・なし両方を追加（スキップ理由含む）
             if signal:
                 signals.append(signal)
 
@@ -128,8 +129,14 @@ def detect_single_signal(
     signal_result = check_signal(h4, d1)
 
     if signal_result["signal"] is None:
-        # シグナルなし
-        return None
+        # シグナルなし - スキップ理由を返す
+        bar_dt = h4.iloc[-1]["datetime"] if len(h4) > 0 else datetime.now(tz)
+        return {
+            "symbol": symbol,
+            "signal": None,
+            "bar_dt": bar_dt,
+            "skip_reason": signal_result.get("reason", "条件不成立")
+        }
 
     signal_type = signal_result["signal"]  # "LONG" or "SHORT"
     pattern = signal_result.get("pattern", "Unknown")
