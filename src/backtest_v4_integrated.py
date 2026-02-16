@@ -358,8 +358,10 @@ def run_backtest_v4_integrated(
 
         # ==================== 新規エントリーチェック ====================
         if active_trade is None and i < len(h4) - 2:
-            # シグナル判定（現在のバーと日足データ）
-            d1_subset = d1[d1["datetime"] <= current_time]
+            # シグナル判定（現在のバーと確定済み日足データ）
+            # 日足もbar_end_time <= current_timeで確定判定（ルックアヘッド回避）
+            d1_end_time = d1["datetime"] + pd.Timedelta(days=1)
+            d1_subset = d1[d1_end_time <= current_time]
             signal = check_signal(
                 h4.iloc[max(0, i-50):i+1],
                 d1_subset

@@ -130,7 +130,8 @@ def detect_single_signal(
     now = datetime.now(tz)
     h4_end_time = h4["datetime"] + pd.Timedelta(hours=4)
     h4_past = h4[h4_end_time <= now].copy()
-    d1_past = d1[d1["datetime"] < now].copy()  # 日足は1日単位なので既存ロジックでOK
+    d1_end_time = d1["datetime"] + pd.Timedelta(days=1)
+    d1_past = d1[d1_end_time <= now].copy()  # 日足も終了時刻で確定判定
 
     # 最新の確定足でシグナルチェック
     signal_result = check_signal(h4_past, d1_past)

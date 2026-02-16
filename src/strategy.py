@@ -76,6 +76,10 @@ def check_signal(h4: pd.DataFrame, d1: pd.DataFrame) -> dict:
             "datetime": datetime (always)
         }
     """
+    # 最低2本必要（latest + prev）
+    if len(h4) < 2:
+        return {"signal": None, "reason": "4H足データ不足", "close": 0.0, "ema20": 0.0, "atr": 0.0, "datetime": None}
+
     # 4H足の計算（見送り時にも必要なので最初に実行）
     h4 = h4.copy()
     h4["ema20"] = calculate_ema(h4["close"], EMA_PERIOD)
