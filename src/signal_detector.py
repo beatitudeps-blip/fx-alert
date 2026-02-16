@@ -125,11 +125,12 @@ def detect_single_signal(
     if d1["datetime"].dt.tz is None:
         d1["datetime"] = d1["datetime"].dt.tz_localize("UTC").dt.tz_convert(tz)
 
-    # 現在時刻よりも古いデータのみ使用（確定した足のみ）
-    # TwelveData APIは未来のデータも返すことがあるため、フィルタリングが必要
+    # 確定した足のみ使用（足の終了時刻で判定）
+    # TwelveData APIは開始時刻をラベルにするため、bar_end_time <= now で確定判定
     now = datetime.now(tz)
-    h4_past = h4[h4["datetime"] < now].copy()
-    d1_past = d1[d1["datetime"] < now].copy()
+    h4_end_time = h4["datetime"] + pd.Timedelta(hours=4)
+    h4_past = h4[h4_end_time <= now].copy()
+    d1_past = d1[d1["datetime"] < now].copy()  # 日足は1日単位なので既存ロジックでOK
 
     # 最新の確定足でシグナルチェック
     signal_result = check_signal(h4_past, d1_past)
@@ -222,9 +223,10 @@ def detect_single_signal(
         tp2_price = entry_price - (sl_distance_price * tp2_r)
 
     # スプレッドフィルター + メンテナンス時間チェック
-    # エントリー予定時刻 = 次の4H足の始値時刻
+    # エントリー予定時刻 = 1本待ち戦略（次の次の4H足の始値時刻）
+    # 例: 確定足12:00-16:00 → 次足16:00-20:00をスキップ → 20:00エントリー
     from datetime import timedelta
-    entry_dt = bar_dt + timedelta(hours=4)
+    entry_dt = bar_dt + timedelta(hours=8)
 
     should_skip, skip_reason = cost_model.should_skip_entry(symbol, entry_dt)
 

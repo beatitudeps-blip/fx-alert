@@ -162,12 +162,17 @@ class LineNotifier:
         direction_jp = "買い" if side == "LONG" else "売り"
         emoji = "🔼" if side == "LONG" else "🔽"
 
+        # 確定足の範囲を計算
+        bar_start = signal_dt
+        bar_end = signal_dt + timedelta(hours=4)
+
         msg = f"""🚨 {symbol} {emoji} {direction_jp}シグナル
 
 【シグナル情報】
 パターン: {pattern}
-シグナル足: {signal_dt.strftime('%Y-%m-%d %H:%M JST')}
-次足始値: {next_dt.strftime('%Y-%m-%d %H:%M JST')}
+確定足ラベル: {signal_dt.strftime('%Y-%m-%d %H:%M JST')}
+確定足範囲: {bar_start.strftime('%H:%M')}〜{bar_end.strftime('%H:%M')}
+エントリー時刻: {next_dt.strftime('%Y-%m-%d %H:%M JST')}
 
 【エントリー】
 注文種別: {'成行' if entry_mode == 'NEXT_OPEN_MARKET' else '逆指値'}
@@ -277,11 +282,14 @@ ATR: {atr:.3f}
         include_skips = notifier_config.get("include_skips", True)
 
         # ヘッダー
-        next_dt = bar_dt + timedelta(hours=4)
+        # 1本待ち戦略: 確定足の2本後（+8h）でエントリー
+        entry_dt = bar_dt + timedelta(hours=8)
+        bar_end = bar_dt + timedelta(hours=4)
         msg = f"""📊 4H足確定通知（{len(results)}通貨）
 
-【確定足】{bar_dt.strftime('%Y-%m-%d %H:%M JST')}
-【次足始値】{next_dt.strftime('%Y-%m-%d %H:%M JST')}
+【確定足ラベル】{bar_dt.strftime('%Y-%m-%d %H:%M JST')}
+【確定足範囲】{bar_dt.strftime('%H:%M')}〜{bar_end.strftime('%H:%M')}
+【エントリー時刻】{entry_dt.strftime('%Y-%m-%d %H:%M JST')}
 【実行時刻】{run_dt.strftime('%Y-%m-%d %H:%M:%S JST')}
 
 """
@@ -293,7 +301,7 @@ ATR: {atr:.3f}
         for result in results:
             if result["status"] == "SIGNAL":
                 signal_count += 1
-                msg += self._format_signal_block(result, next_dt, equity_jpy, risk_pct)
+                msg += self._format_signal_block(result, entry_dt, equity_jpy, risk_pct)
                 msg += "\n" + "="*40 + "\n\n"
 
         # 見送りブロック（圧縮、理由コード + 相場状態サマリー）

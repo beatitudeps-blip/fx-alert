@@ -357,7 +357,7 @@ def run_backtest_v4_integrated(
                 active_trade = None
 
         # ==================== 新規エントリーチェック ====================
-        if active_trade is None and i < len(h4) - 1:
+        if active_trade is None and i < len(h4) - 2:
             # シグナル判定（現在のバーと日足データ）
             d1_subset = d1[d1["datetime"] <= current_time]
             signal = check_signal(
@@ -369,8 +369,9 @@ def run_backtest_v4_integrated(
                 # シグナル方向を取得
                 side = signal["signal"]  # "LONG" or "SHORT"
 
-                # 次のバーでエントリー（NEXT_OPEN_MARKET）
-                next_bar = h4.iloc[i + 1]
+                # 1本待ち戦略: 次の次のバーでエントリー（NEXT_OPEN_MARKET）
+                # 例: i=確定足 → i+1=スキップ → i+2=エントリー
+                next_bar = h4.iloc[i + 2]
                 entry_time = next_bar["datetime"]
 
                 if isinstance(entry_time, pd.Timestamp):
