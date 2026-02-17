@@ -1,0 +1,113 @@
+{
+  "start_date": "2025-09-25",
+  "end_date": "2026-02-15",
+  "initial_equity": 100000.0,
+  "final_equity": 100244.05109787104,
+  "total_trades": 21,
+  "wins": 12,
+  "losses": 9,
+  "win_rate": 0.5714285714285714,
+  "total_pnl_gross": 314.4510978710315,
+  "total_pnl_net": 244.05109787103152,
+  "total_cost": 70.40000000000002,
+  "pf_gross": 1.073100063715394,
+  "pf_net": 1.0563309298382266,
+  "avg_win_net": 381.37532950740615,
+  "avg_loss_net": -481.3836506908713,
+  "expectancy_net": 11.621480851001508,
+  "avg_r_multiple": 0.03616094701187053,
+  "max_drawdown_close_based": 0.018883436500089598,
+  "per_symbol": {
+    "USD/JPY": {
+      "count": 21,
+      "total_pnl_net": 244.05109787103152,
+      "win_rate": 0.5714285714285714,
+      "avg_pnl_net": 11.62148085100149,
+      "avg_win": 381.37532950740615,
+      "avg_loss": -481.3836506908713
+    }
+  },
+  "per_side": {
+    "LONG": {
+      "count": 18,
+      "total_pnl_net": -171.38379863521948,
+      "win_rate": 0.5555555555555556,
+      "avg_pnl_net": -9.521322146401095,
+      "avg_win": 365.77156413723606,
+      "avg_loss": -478.63743000094746
+    },
+    "SHORT": {
+      "count": 3,
+      "total_pnl_net": 415.434896506251,
+      "win_rate": 0.6666666666666666,
+      "avg_pnl_net": 138.478298835417,
+      "avg_win": 459.39415635825674,
+      "avg_loss": -503.3534162102625
+    }
+  },
+  "per_exit_reason": {
+    "TP2": {
+      "count": 9,
+      "total_pnl_net": 4115.756326675653,
+      "win_rate": 1.0,
+      "avg_pnl_net": 457.30625851951703,
+      "avg_win": 457.30625851951703,
+      "avg_loss": 0.0
+    },
+    "SL": {
+      "count": 9,
+      "total_pnl_net": -4332.452856217842,
+      "win_rate": 0.0,
+      "avg_pnl_net": -481.3836506908713,
+      "avg_win": 0.0,
+      "avg_loss": -481.3836506908713
+    },
+    "BE": {
+      "count": 3,
+      "total_pnl_net": 460.74762741322047,
+      "win_rate": 1.0,
+      "avg_pnl_net": 153.58254247107348,
+      "avg_win": 153.58254247107348,
+      "avg_loss": 0.0
+    }
+  },
+  "risk_violations_count": 0,
+  "risk_violations": [],
+  "monthly_returns": [
+    {
+      "month": "2025-10",
+      "trades": 2,
+      "pnl_net": 928.3006154623955,
+      "equity": 100928.3006154624,
+      "return_pct": 0.9283006154623956
+    },
+    {
+      "month": "2025-11",
+      "trades": 6,
+      "pnl_net": -695.5617304085301,
+      "equity": 100232.73888505387,
+      "return_pct": -0.6955617304085301
+    },
+    {
+      "month": "2025-12",
+      "trades": 5,
+      "pnl_net": -534.7103374610577,
+      "equity": 99698.02854759281,
+      "return_pct": -0.5347103374610578
+    },
+    {
+      "month": "2026-01",
+      "trades": 7,
+      "pnl_net": 57.92032290126292,
+      "equity": 99755.94887049407,
+      "return_pct": 0.05792032290126292
+    },
+    {
+      "month": "2026-02",
+      "trades": 1,
+      "pnl_net": 488.10222737696085,
+      "equity": 100244.05109787104,
+      "return_pct": 0.4881022273769608
+    }
+  ]
+}

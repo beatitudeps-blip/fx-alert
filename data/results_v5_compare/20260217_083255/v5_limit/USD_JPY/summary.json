@@ -1,0 +1,286 @@
+{
+  "start_date": "2025-01-01",
+  "end_date": "2026-02-14",
+  "initial_equity": 100000.0,
+  "final_equity": 100975.3035738255,
+  "total_trades": 4,
+  "wins": 2,
+  "losses": 2,
+  "win_rate": 0.5,
+  "total_pnl_gross": 1007.3035738254957,
+  "total_pnl_net": 975.3035738254957,
+  "total_cost": 32.0,
+  "pf_gross": 2.3287663448253397,
+  "pf_net": 2.259961239503822,
+  "avg_win_net": 874.6889207731411,
+  "avg_loss_net": -387.0371338603933,
+  "expectancy_net": 243.82589345637393,
+  "avg_r_multiple": 0.5044463923709978,
+  "max_drawdown_close_based": 0.007607656028386241,
+  "per_symbol": {
+    "USD/JPY": {
+      "count": 4,
+      "total_pnl_net": 975.3035738254957,
+      "win_rate": 0.5,
+      "avg_pnl_net": 243.82589345637393,
+      "avg_win": 874.6889207731411,
+      "avg_loss": -387.0371338603933
+    }
+  },
+  "per_side": {
+    "LONG": {
+      "count": 3,
+      "total_pnl_net": -484.1969937079957,
+      "win_rate": 0.3333333333333333,
+      "avg_pnl_net": -161.39899790266523,
+      "avg_win": 289.87727401279085,
+      "avg_loss": -387.0371338603933
+    },
+    "SHORT": {
+      "count": 1,
+      "total_pnl_net": 1459.5005675334914,
+      "win_rate": 1.0,
+      "avg_pnl_net": 1459.5005675334914,
+      "avg_win": 1459.5005675334914,
+      "avg_loss": 0.0
+    }
+  },
+  "per_exit_reason": {
+    "BE": {
+      "count": 1,
+      "total_pnl_net": 289.87727401279085,
+      "win_rate": 1.0,
+      "avg_pnl_net": 289.87727401279085,
+      "avg_win": 289.87727401279085,
+      "avg_loss": 0.0
+    },
+    "SL": {
+      "count": 2,
+      "total_pnl_net": -774.0742677207866,
+      "win_rate": 0.0,
+      "avg_pnl_net": -387.0371338603933,
+      "avg_win": 0.0,
+      "avg_loss": -387.0371338603933
+    },
+    "EMA_CROSS": {
+      "count": 1,
+      "total_pnl_net": 1459.5005675334914,
+      "win_rate": 1.0,
+      "avg_pnl_net": 1459.5005675334914,
+      "avg_win": 1459.5005675334914,
+      "avg_loss": 0.0
+    }
+  },
+  "risk_violations_count": 0,
+  "risk_violations": [],
+  "monthly_returns": [
+    {
+      "month": "2025-02",
+      "trades": 1,
+      "pnl_net": 1459.5005675334914,
+      "equity": 101459.5005675335,
+      "return_pct": 1.4595005675334913
+    },
+    {
+      "month": "2025-11",
+      "trades": 1,
+      "pnl_net": 289.87727401279085,
+      "equity": 101749.37784154629,
+      "return_pct": 0.28987727401279084
+    },
+    {
+      "month": "2025-12",
+      "trades": 2,
+      "pnl_net": -774.0742677207866,
+      "equity": 100975.3035738255,
+      "return_pct": -0.7740742677207866
+    }
+  ],
+  "stats": {
+    "total_signals": 29,
+    "executed_trades": 4,
+    "skipped_signals": 25,
+    "maintenance_skips": 1,
+    "spread_filter_skips": 0,
+    "position_size_skips": 12,
+    "limit_expired_skips": 11,
+    "streak_guard_skips": 0,
+    "skipped_details": [
+      {
+        "signal_time": "2025-01-23 04:00:00+09:00",
+        "entry_time": "2025-01-23 08:00:00+09:00",
+        "symbol": "USD/JPY",
+        "side": "SHORT",
+        "reason": "position_size_invalid"
+      },
+      {
+        "signal_time": "2025-01-29 04:00:00+09:00",
+        "entry_time": "2025-01-29 08:00:00+09:00",
+        "symbol": "USD/JPY",
+        "side": "SHORT",
+        "reason": "position_size_invalid"
+      },
+      {
+        "signal_time": "2025-01-29 20:00:00+09:00",
+        "entry_time": "2025-01-30 00:00:00+09:00",
+        "symbol": "USD/JPY",
+        "side": "SHORT",
+        "reason": "limit_expired (155.576)"
+      },
+      {
+        "signal_time": "2025-02-11 04:00:00+09:00",
+        "entry_time": "2025-02-11 08:00:00+09:00",
+        "symbol": "USD/JPY",
+        "side": "SHORT",
+        "reason": "limit_expired (152.311)"
+      },
+      {
+        "signal_time": "2025-02-28 12:00:00+09:00",
+        "entry_time": "2025-02-28 16:00:00+09:00",
+        "symbol": "USD/JPY",
+        "side": "SHORT",
+        "reason": "position_size_invalid"
+      },
+      {
+        "signal_time": "2025-02-28 20:00:00+09:00",
+        "entry_time": "2025-03-01 00:00:00+09:00",
+        "symbol": "USD/JPY",
+        "side": "SHORT",
+        "reason": "position_size_invalid"
+      },
+      {
+        "signal_time": "2025-03-06 00:00:00+09:00",
+        "entry_time": "2025-03-06 04:00:00+09:00",
+        "symbol": "USD/JPY",
+        "side": "SHORT",
+        "reason": "limit_expired (149.738)"
+      },
+      {
+        "signal_time": "2025-03-12 08:00:00+09:00",
+        "entry_time": "2025-03-12 12:00:00+09:00",
+        "symbol": "USD/JPY",
+        "side": "SHORT",
+        "reason": "position_size_invalid"
+      },
+      {
+        "signal_time": "2025-03-18 04:00:00+09:00",
+        "entry_time": "2025-03-18 08:00:00+09:00",
+        "symbol": "USD/JPY",
+        "side": "SHORT",
+        "reason": "position_size_invalid"
+      },
+      {
+        "signal_time": "2025-03-22 04:00:00+09:00",
+        "entry_time": "2025-03-22 08:00:00+09:00",
+        "symbol": "USD/JPY",
+        "side": "SHORT",
+        "reason": "limit_expired (149.002)"
+      },
+      {
+        "signal_time": "2025-04-03 00:00:00+09:00",
+        "entry_time": "2025-04-03 04:00:00+09:00",
+        "symbol": "USD/JPY",
+        "side": "SHORT",
+        "reason": "limit_expired (149.821)"
+      },
+      {
+        "signal_time": "2025-04-09 00:00:00+09:00",
+        "entry_time": "2025-04-09 04:00:00+09:00",
+        "symbol": "USD/JPY",
+        "side": "SHORT",
+        "reason": "position_size_invalid"
+      },
+      {
+        "signal_time": "2025-04-10 20:00:00+09:00",
+        "entry_time": "2025-04-11 00:00:00+09:00",
+        "symbol": "USD/JPY",
+        "side": "SHORT",
+        "reason": "position_size_invalid"
+      },
+      {
+        "signal_time": "2025-04-18 12:00:00+09:00",
+        "entry_time": "2025-04-18 16:00:00+09:00",
+        "symbol": "USD/JPY",
+        "side": "SHORT",
+        "reason": "limit_expired (142.899)"
+      },
+      {
+        "signal_time": "2025-04-19 04:00:00+09:00",
+        "entry_time": "2025-04-19 08:00:00+09:00",
+        "symbol": "USD/JPY",
+        "side": "SHORT",
+        "reason": "limit_expired (142.732)"
+      },
+      {
+        "signal_time": "2025-05-06 08:00:00+09:00",
+        "entry_time": "2025-05-06 12:00:00+09:00",
+        "symbol": "USD/JPY",
+        "side": "LONG",
+        "reason": "position_size_invalid"
+      },
+      {
+        "signal_time": "2025-05-08 20:00:00+09:00",
+        "entry_time": "2025-05-09 00:00:00+09:00",
+        "symbol": "USD/JPY",
+        "side": "SHORT",
+        "reason": "position_size_invalid"
+      },
+      {
+        "signal_time": "2025-05-15 08:00:00+09:00",
+        "entry_time": "2025-05-15 12:00:00+09:00",
+        "symbol": "USD/JPY",
+        "side": "LONG",
+        "reason": "position_size_invalid"
+      },
+      {
+        "signal_time": "2025-05-23 12:00:00+09:00",
+        "entry_time": "2025-05-23 16:00:00+09:00",
+        "symbol": "USD/JPY",
+        "side": "SHORT",
+        "reason": "limit_expired (144.221)"
+      },
+      {
+        "signal_time": "2025-11-17 20:00:00+09:00",
+        "entry_time": "2025-11-18 00:00:00+09:00",
+        "symbol": "USD/JPY",
+        "side": "LONG",
+        "reason": "limit_expired (154.448)"
+      },
+      {
+        "signal_time": "2025-11-25 00:00:00+09:00",
+        "entry_time": "2025-11-25 04:00:00+09:00",
+        "symbol": "USD/JPY",
+        "side": "LONG",
+        "reason": "limit_expired (156.533)"
+      },
+      {
+        "signal_time": "2025-11-27 00:00:00+09:00",
+        "entry_time": "2025-11-27 04:00:00+09:00",
+        "symbol": "USD/JPY",
+        "side": "LONG",
+        "reason": "position_size_invalid"
+      },
+      {
+        "signal_time": "2025-12-04 00:00:00+09:00",
+        "entry_time": "2025-12-04 04:00:00+09:00",
+        "symbol": "USD/JPY",
+        "side": "LONG",
+        "reason": "intra_bar_sl_hit (conservative skip)"
+      },
+      {
+        "signal_time": "2025-12-13 08:00:00+09:00",
+        "entry_time": "2025-12-13 12:00:00+09:00",
+        "symbol": "USD/JPY",
+        "side": "SHORT",
+        "reason": "maintenance (limit fill)"
+      },
+      {
+        "signal_time": "2026-02-14 04:00:00+09:00",
+        "entry_time": "2026-02-14 08:00:00+09:00",
+        "symbol": "USD/JPY",
+        "side": "SHORT",
+        "reason": "limit_expired (153.777)"
+      }
+    ]
+  }
+}

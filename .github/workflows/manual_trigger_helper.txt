@@ -1,0 +1,9 @@
+GitHub.comにアクセスして手動実行:
+
+1. https://github.com/<your-username>/fx-alert/actions
+2. 左側の "FX Alert System" をクリック
+3. 右上の "Run workflow" ボタンをクリック
+4. "Run workflow" を確認
+
+または、gh CLI（未インストール）があれば:
+gh workflow run fx-alert.yml

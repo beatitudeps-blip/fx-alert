@@ -1,0 +1,587 @@
+{
+  "start_date": "2025-01-01",
+  "end_date": "2026-02-14",
+  "initial_equity": 100000.0,
+  "final_equity": 100000.0,
+  "total_trades": 0,
+  "total_pnl_gross": 0.0,
+  "total_pnl_net": 0.0,
+  "total_cost": 0.0,
+  "stats": {
+    "total_signals": 81,
+    "executed_trades": 0,
+    "skipped_signals": 81,
+    "maintenance_skips": 4,
+    "spread_filter_skips": 0,
+    "position_size_skips": 77,
+    "skipped_details": [
+      {
+        "signal_time": "2025-01-15 20:00:00+09:00",
+        "entry_time": "2025-01-16 04:00:00+09:00",
+        "symbol": "GBP/JPY",
+        "side": "SHORT",
+        "reason": "position_size_invalid"
+      },
+      {
+        "signal_time": "2025-01-22 04:00:00+09:00",
+        "entry_time": "2025-01-22 12:00:00+09:00",
+        "symbol": "GBP/JPY",
+        "side": "SHORT",
+        "reason": "position_size_invalid"
+      },
+      {
+        "signal_time": "2025-01-29 04:00:00+09:00",
+        "entry_time": "2025-01-29 12:00:00+09:00",
+        "symbol": "GBP/JPY",
+        "side": "SHORT",
+        "reason": "position_size_invalid"
+      },
+      {
+        "signal_time": "2025-01-30 20:00:00+09:00",
+        "entry_time": "2025-01-31 04:00:00+09:00",
+        "symbol": "GBP/JPY",
+        "side": "SHORT",
+        "reason": "position_size_invalid"
+      },
+      {
+        "signal_time": "2025-02-01 16:00:00+09:00",
+        "entry_time": "2025-02-03 20:00:00+09:00",
+        "symbol": "GBP/JPY",
+        "side": "SHORT",
+        "reason": "position_size_invalid"
+      },
+      {
+        "signal_time": "2025-02-22 04:00:00+09:00",
+        "entry_time": "2025-02-22 12:00:00+09:00",
+        "symbol": "GBP/JPY",
+        "side": "SHORT",
+        "reason": "maintenance"
+      },
+      {
+        "signal_time": "2025-02-25 20:00:00+09:00",
+        "entry_time": "2025-02-26 04:00:00+09:00",
+        "symbol": "GBP/JPY",
+        "side": "SHORT",
+        "reason": "position_size_invalid"
+      },
+      {
+        "signal_time": "2025-02-27 12:00:00+09:00",
+        "entry_time": "2025-02-27 20:00:00+09:00",
+        "symbol": "GBP/JPY",
+        "side": "SHORT",
+        "reason": "position_size_invalid"
+      },
+      {
+        "signal_time": "2025-02-28 20:00:00+09:00",
+        "entry_time": "2025-03-01 04:00:00+09:00",
+        "symbol": "GBP/JPY",
+        "side": "SHORT",
+        "reason": "position_size_invalid"
+      },
+      {
+        "signal_time": "2025-03-01 12:00:00+09:00",
+        "entry_time": "2025-03-03 16:00:00+09:00",
+        "symbol": "GBP/JPY",
+        "side": "SHORT",
+        "reason": "position_size_invalid"
+      },
+      {
+        "signal_time": "2025-03-03 20:00:00+09:00",
+        "entry_time": "2025-03-04 04:00:00+09:00",
+        "symbol": "GBP/JPY",
+        "side": "SHORT",
+        "reason": "position_size_invalid"
+      },
+      {
+        "signal_time": "2025-03-05 00:00:00+09:00",
+        "entry_time": "2025-03-05 08:00:00+09:00",
+        "symbol": "GBP/JPY",
+        "side": "LONG",
+        "reason": "position_size_invalid"
+      },
+      {
+        "signal_time": "2025-03-05 12:00:00+09:00",
+        "entry_time": "2025-03-05 20:00:00+09:00",
+        "symbol": "GBP/JPY",
+        "side": "LONG",
+        "reason": "position_size_invalid"
+      },
+      {
+        "signal_time": "2025-03-08 12:00:00+09:00",
+        "entry_time": "2025-03-10 16:00:00+09:00",
+        "symbol": "GBP/JPY",
+        "side": "LONG",
+        "reason": "position_size_invalid"
+      },
+      {
+        "signal_time": "2025-03-12 12:00:00+09:00",
+        "entry_time": "2025-03-12 20:00:00+09:00",
+        "symbol": "GBP/JPY",
+        "side": "LONG",
+        "reason": "position_size_invalid"
+      },
+      {
+        "signal_time": "2025-03-21 20:00:00+09:00",
+        "entry_time": "2025-03-22 04:00:00+09:00",
+        "symbol": "GBP/JPY",
+        "side": "LONG",
+        "reason": "position_size_invalid"
+      },
+      {
+        "signal_time": "2025-03-24 16:00:00+09:00",
+        "entry_time": "2025-03-25 00:00:00+09:00",
+        "symbol": "GBP/JPY",
+        "side": "LONG",
+        "reason": "position_size_invalid"
+      },
+      {
+        "signal_time": "2025-04-22 16:00:00+09:00",
+        "entry_time": "2025-04-23 00:00:00+09:00",
+        "symbol": "GBP/JPY",
+        "side": "SHORT",
+        "reason": "position_size_invalid"
+      },
+      {
+        "signal_time": "2025-04-29 16:00:00+09:00",
+        "entry_time": "2025-04-30 00:00:00+09:00",
+        "symbol": "GBP/JPY",
+        "side": "LONG",
+        "reason": "position_size_invalid"
+      },
+      {
+        "signal_time": "2025-05-01 20:00:00+09:00",
+        "entry_time": "2025-05-02 04:00:00+09:00",
+        "symbol": "GBP/JPY",
+        "side": "LONG",
+        "reason": "position_size_invalid"
+      },
+      {
+        "signal_time": "2025-05-20 16:00:00+09:00",
+        "entry_time": "2025-05-21 00:00:00+09:00",
+        "symbol": "GBP/JPY",
+        "side": "LONG",
+        "reason": "position_size_invalid"
+      },
+      {
+        "signal_time": "2025-05-21 08:00:00+09:00",
+        "entry_time": "2025-05-21 16:00:00+09:00",
+        "symbol": "GBP/JPY",
+        "side": "LONG",
+        "reason": "position_size_invalid"
+      },
+      {
+        "signal_time": "2025-05-22 16:00:00+09:00",
+        "entry_time": "2025-05-23 00:00:00+09:00",
+        "symbol": "GBP/JPY",
+        "side": "SHORT",
+        "reason": "position_size_invalid"
+      },
+      {
+        "signal_time": "2025-05-24 00:00:00+09:00",
+        "entry_time": "2025-05-24 08:00:00+09:00",
+        "symbol": "GBP/JPY",
+        "side": "LONG",
+        "reason": "position_size_invalid"
+      },
+      {
+        "signal_time": "2025-06-03 20:00:00+09:00",
+        "entry_time": "2025-06-04 04:00:00+09:00",
+        "symbol": "GBP/JPY",
+        "side": "SHORT",
+        "reason": "position_size_invalid"
+      },
+      {
+        "signal_time": "2025-06-11 20:00:00+09:00",
+        "entry_time": "2025-06-12 04:00:00+09:00",
+        "symbol": "GBP/JPY",
+        "side": "LONG",
+        "reason": "position_size_invalid"
+      },
+      {
+        "signal_time": "2025-06-13 08:00:00+09:00",
+        "entry_time": "2025-06-13 16:00:00+09:00",
+        "symbol": "GBP/JPY",
+        "side": "LONG",
+        "reason": "position_size_invalid"
+      },
+      {
+        "signal_time": "2025-07-07 20:00:00+09:00",
+        "entry_time": "2025-07-08 04:00:00+09:00",
+        "symbol": "GBP/JPY",
+        "side": "LONG",
+        "reason": "position_size_invalid"
+      },
+      {
+        "signal_time": "2025-07-10 20:00:00+09:00",
+        "entry_time": "2025-07-11 04:00:00+09:00",
+        "symbol": "GBP/JPY",
+        "side": "LONG",
+        "reason": "position_size_invalid"
+      },
+      {
+        "signal_time": "2025-07-11 16:00:00+09:00",
+        "entry_time": "2025-07-12 00:00:00+09:00",
+        "symbol": "GBP/JPY",
+        "side": "LONG",
+        "reason": "position_size_invalid"
+      },
+      {
+        "signal_time": "2025-07-15 04:00:00+09:00",
+        "entry_time": "2025-07-15 12:00:00+09:00",
+        "symbol": "GBP/JPY",
+        "side": "LONG",
+        "reason": "position_size_invalid"
+      },
+      {
+        "signal_time": "2025-07-18 00:00:00+09:00",
+        "entry_time": "2025-07-18 08:00:00+09:00",
+        "symbol": "GBP/JPY",
+        "side": "LONG",
+        "reason": "position_size_invalid"
+      },
+      {
+        "signal_time": "2025-07-23 20:00:00+09:00",
+        "entry_time": "2025-07-24 04:00:00+09:00",
+        "symbol": "GBP/JPY",
+        "side": "LONG",
+        "reason": "position_size_invalid"
+      },
+      {
+        "signal_time": "2025-07-26 00:00:00+09:00",
+        "entry_time": "2025-07-26 08:00:00+09:00",
+        "symbol": "GBP/JPY",
+        "side": "LONG",
+        "reason": "position_size_invalid"
+      },
+      {
+        "signal_time": "2025-08-06 20:00:00+09:00",
+        "entry_time": "2025-08-07 04:00:00+09:00",
+        "symbol": "GBP/JPY",
+        "side": "SHORT",
+        "reason": "position_size_invalid"
+      },
+      {
+        "signal_time": "2025-08-20 00:00:00+09:00",
+        "entry_time": "2025-08-20 08:00:00+09:00",
+        "symbol": "GBP/JPY",
+        "side": "LONG",
+        "reason": "position_size_invalid"
+      },
+      {
+        "signal_time": "2025-08-21 00:00:00+09:00",
+        "entry_time": "2025-08-21 08:00:00+09:00",
+        "symbol": "GBP/JPY",
+        "side": "LONG",
+        "reason": "position_size_invalid"
+      },
+      {
+        "signal_time": "2025-08-22 04:00:00+09:00",
+        "entry_time": "2025-08-22 12:00:00+09:00",
+        "symbol": "GBP/JPY",
+        "side": "SHORT",
+        "reason": "position_size_invalid"
+      },
+      {
+        "signal_time": "2025-08-23 00:00:00+09:00",
+        "entry_time": "2025-08-23 08:00:00+09:00",
+        "symbol": "GBP/JPY",
+        "side": "LONG",
+        "reason": "position_size_invalid"
+      },
+      {
+        "signal_time": "2025-08-26 04:00:00+09:00",
+        "entry_time": "2025-08-26 12:00:00+09:00",
+        "symbol": "GBP/JPY",
+        "side": "LONG",
+        "reason": "position_size_invalid"
+      },
+      {
+        "signal_time": "2025-08-27 04:00:00+09:00",
+        "entry_time": "2025-08-27 12:00:00+09:00",
+        "symbol": "GBP/JPY",
+        "side": "LONG",
+        "reason": "position_size_invalid"
+      },
+      {
+        "signal_time": "2025-08-28 12:00:00+09:00",
+        "entry_time": "2025-08-28 20:00:00+09:00",
+        "symbol": "GBP/JPY",
+        "side": "LONG",
+        "reason": "position_size_invalid"
+      },
+      {
+        "signal_time": "2025-09-03 20:00:00+09:00",
+        "entry_time": "2025-09-04 04:00:00+09:00",
+        "symbol": "GBP/JPY",
+        "side": "SHORT",
+        "reason": "position_size_invalid"
+      },
+      {
+        "signal_time": "2025-09-04 08:00:00+09:00",
+        "entry_time": "2025-09-04 16:00:00+09:00",
+        "symbol": "GBP/JPY",
+        "side": "SHORT",
+        "reason": "position_size_invalid"
+      },
+      {
+        "signal_time": "2025-09-04 20:00:00+09:00",
+        "entry_time": "2025-09-05 04:00:00+09:00",
+        "symbol": "GBP/JPY",
+        "side": "LONG",
+        "reason": "position_size_invalid"
+      },
+      {
+        "signal_time": "2025-09-10 20:00:00+09:00",
+        "entry_time": "2025-09-11 04:00:00+09:00",
+        "symbol": "GBP/JPY",
+        "side": "LONG",
+        "reason": "position_size_invalid"
+      },
+      {
+        "signal_time": "2025-09-11 16:00:00+09:00",
+        "entry_time": "2025-09-12 00:00:00+09:00",
+        "symbol": "GBP/JPY",
+        "side": "LONG",
+        "reason": "position_size_invalid"
+      },
+      {
+        "signal_time": "2025-09-12 00:00:00+09:00",
+        "entry_time": "2025-09-12 08:00:00+09:00",
+        "symbol": "GBP/JPY",
+        "side": "LONG",
+        "reason": "position_size_invalid"
+      },
+      {
+        "signal_time": "2025-09-13 00:00:00+09:00",
+        "entry_time": "2025-09-13 08:00:00+09:00",
+        "symbol": "GBP/JPY",
+        "side": "LONG",
+        "reason": "position_size_invalid"
+      },
+      {
+        "signal_time": "2025-09-24 04:00:00+09:00",
+        "entry_time": "2025-09-24 12:00:00+09:00",
+        "symbol": "GBP/JPY",
+        "side": "LONG",
+        "reason": "position_size_invalid"
+      },
+      {
+        "signal_time": "2025-09-24 16:00:00+09:00",
+        "entry_time": "2025-09-25 00:00:00+09:00",
+        "symbol": "GBP/JPY",
+        "side": "LONG",
+        "reason": "position_size_invalid"
+      },
+      {
+        "signal_time": "2025-09-25 00:00:00+09:00",
+        "entry_time": "2025-09-25 08:00:00+09:00",
+        "symbol": "GBP/JPY",
+        "side": "LONG",
+        "reason": "position_size_invalid"
+      },
+      {
+        "signal_time": "2025-09-25 08:00:00+09:00",
+        "entry_time": "2025-09-25 16:00:00+09:00",
+        "symbol": "GBP/JPY",
+        "side": "LONG",
+        "reason": "position_size_invalid"
+      },
+      {
+        "signal_time": "2025-09-26 20:00:00+09:00",
+        "entry_time": "2025-09-27 04:00:00+09:00",
+        "symbol": "GBP/JPY",
+        "side": "LONG",
+        "reason": "position_size_invalid"
+      },
+      {
+        "signal_time": "2025-10-11 00:00:00+09:00",
+        "entry_time": "2025-10-11 08:00:00+09:00",
+        "symbol": "GBP/JPY",
+        "side": "LONG",
+        "reason": "position_size_invalid"
+      },
+      {
+        "signal_time": "2025-10-16 12:00:00+09:00",
+        "entry_time": "2025-10-16 20:00:00+09:00",
+        "symbol": "GBP/JPY",
+        "side": "LONG",
+        "reason": "position_size_invalid"
+      },
+      {
+        "signal_time": "2025-10-16 20:00:00+09:00",
+        "entry_time": "2025-10-17 04:00:00+09:00",
+        "symbol": "GBP/JPY",
+        "side": "LONG",
+        "reason": "position_size_invalid"
+      },
+      {
+        "signal_time": "2025-10-18 16:00:00+09:00",
+        "entry_time": "2025-10-20 20:00:00+09:00",
+        "symbol": "GBP/JPY",
+        "side": "LONG",
+        "reason": "position_size_invalid"
+      },
+      {
+        "signal_time": "2025-10-21 20:00:00+09:00",
+        "entry_time": "2025-10-22 04:00:00+09:00",
+        "symbol": "GBP/JPY",
+        "side": "LONG",
+        "reason": "position_size_invalid"
+      },
+      {
+        "signal_time": "2025-10-23 12:00:00+09:00",
+        "entry_time": "2025-10-23 20:00:00+09:00",
+        "symbol": "GBP/JPY",
+        "side": "LONG",
+        "reason": "position_size_invalid"
+      },
+      {
+        "signal_time": "2025-10-31 20:00:00+09:00",
+        "entry_time": "2025-11-01 04:00:00+09:00",
+        "symbol": "GBP/JPY",
+        "side": "LONG",
+        "reason": "position_size_invalid"
+      },
+      {
+        "signal_time": "2025-11-01 08:00:00+09:00",
+        "entry_time": "2025-11-01 16:00:00+09:00",
+        "symbol": "GBP/JPY",
+        "side": "LONG",
+        "reason": "maintenance"
+      },
+      {
+        "signal_time": "2025-11-04 08:00:00+09:00",
+        "entry_time": "2025-11-04 16:00:00+09:00",
+        "symbol": "GBP/JPY",
+        "side": "LONG",
+        "reason": "position_size_invalid"
+      },
+      {
+        "signal_time": "2025-11-15 12:00:00+09:00",
+        "entry_time": "2025-11-17 20:00:00+09:00",
+        "symbol": "GBP/JPY",
+        "side": "LONG",
+        "reason": "position_size_invalid"
+      },
+      {
+        "signal_time": "2025-11-26 08:00:00+09:00",
+        "entry_time": "2025-11-26 16:00:00+09:00",
+        "symbol": "GBP/JPY",
+        "side": "LONG",
+        "reason": "position_size_invalid"
+      },
+      {
+        "signal_time": "2025-11-29 08:00:00+09:00",
+        "entry_time": "2025-11-29 16:00:00+09:00",
+        "symbol": "GBP/JPY",
+        "side": "LONG",
+        "reason": "maintenance"
+      },
+      {
+        "signal_time": "2025-12-03 16:00:00+09:00",
+        "entry_time": "2025-12-04 00:00:00+09:00",
+        "symbol": "GBP/JPY",
+        "side": "LONG",
+        "reason": "position_size_invalid"
+      },
+      {
+        "signal_time": "2025-12-04 00:00:00+09:00",
+        "entry_time": "2025-12-04 08:00:00+09:00",
+        "symbol": "GBP/JPY",
+        "side": "LONG",
+        "reason": "position_size_invalid"
+      },
+      {
+        "signal_time": "2025-12-12 00:00:00+09:00",
+        "entry_time": "2025-12-12 08:00:00+09:00",
+        "symbol": "GBP/JPY",
+        "side": "LONG",
+        "reason": "position_size_invalid"
+      },
+      {
+        "signal_time": "2025-12-12 20:00:00+09:00",
+        "entry_time": "2025-12-13 04:00:00+09:00",
+        "symbol": "GBP/JPY",
+        "side": "LONG",
+        "reason": "position_size_invalid"
+      },
+      {
+        "signal_time": "2025-12-13 12:00:00+09:00",
+        "entry_time": "2025-12-15 16:00:00+09:00",
+        "symbol": "GBP/JPY",
+        "side": "LONG",
+        "reason": "position_size_invalid"
+      },
+      {
+        "signal_time": "2025-12-26 16:00:00+09:00",
+        "entry_time": "2025-12-27 00:00:00+09:00",
+        "symbol": "GBP/JPY",
+        "side": "LONG",
+        "reason": "position_size_invalid"
+      },
+      {
+        "signal_time": "2025-12-29 20:00:00+09:00",
+        "entry_time": "2025-12-30 04:00:00+09:00",
+        "symbol": "GBP/JPY",
+        "side": "LONG",
+        "reason": "position_size_invalid"
+      },
+      {
+        "signal_time": "2026-01-01 04:00:00+09:00",
+        "entry_time": "2026-01-02 08:00:00+09:00",
+        "symbol": "GBP/JPY",
+        "side": "LONG",
+        "reason": "position_size_invalid"
+      },
+      {
+        "signal_time": "2026-01-03 08:00:00+09:00",
+        "entry_time": "2026-01-03 16:00:00+09:00",
+        "symbol": "GBP/JPY",
+        "side": "LONG",
+        "reason": "maintenance"
+      },
+      {
+        "signal_time": "2026-01-12 08:00:00+09:00",
+        "entry_time": "2026-01-12 16:00:00+09:00",
+        "symbol": "GBP/JPY",
+        "side": "LONG",
+        "reason": "position_size_invalid"
+      },
+      {
+        "signal_time": "2026-01-12 12:00:00+09:00",
+        "entry_time": "2026-01-12 20:00:00+09:00",
+        "symbol": "GBP/JPY",
+        "side": "LONG",
+        "reason": "position_size_invalid"
+      },
+      {
+        "signal_time": "2026-01-16 00:00:00+09:00",
+        "entry_time": "2026-01-16 08:00:00+09:00",
+        "symbol": "GBP/JPY",
+        "side": "LONG",
+        "reason": "position_size_invalid"
+      },
+      {
+        "signal_time": "2026-01-25 12:00:00+09:00",
+        "entry_time": "2026-01-25 20:00:00+09:00",
+        "symbol": "GBP/JPY",
+        "side": "LONG",
+        "reason": "position_size_invalid"
+      },
+      {
+        "signal_time": "2026-01-31 20:00:00+09:00",
+        "entry_time": "2026-02-01 04:00:00+09:00",
+        "symbol": "GBP/JPY",
+        "side": "LONG",
+        "reason": "position_size_invalid"
+      },
+      {
+        "signal_time": "2026-02-01 00:00:00+09:00",
+        "entry_time": "2026-02-01 08:00:00+09:00",
+        "symbol": "GBP/JPY",
+        "side": "LONG",
+        "reason": "position_size_invalid"
+      }
+    ]
+  }
+}
