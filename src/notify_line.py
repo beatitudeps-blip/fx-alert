@@ -366,7 +366,7 @@ ATR: {atr:.3f}
                 msg += "\n\n"
 
         # 次回チェック時刻（次のbar_dt + 5分）
-        next_check_dt = next_dt + timedelta(hours=4, minutes=5)
+        next_check_dt = entry_dt + timedelta(hours=4, minutes=5)
 
         # フッター
         msg += f"""【サマリー】
