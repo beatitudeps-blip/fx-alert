@@ -223,6 +223,69 @@ def main():
                 "Skipped": stats["limit_expired"] if mode == "V5" else 0,
             })
 
+    # ==================== 3通貨合算エクイティカーブ ====================
+    # 全通貨のトレードを時系列順にマージし、単一エクイティカーブで CAGR/MaxDD
+    combined = {}  # mode -> list of (exit_time, pnl)
+    for symbol in SYMBOLS:
+        for mode in ["V4", "V5"]:
+            out_dir = output_base / mode / symbol.replace("/", "_")
+            trades_csv = out_dir / "trades.csv"
+            if trades_csv.exists():
+                df_t = pd.read_csv(trades_csv)
+                df_closed = df_t[df_t["exit_time"].notna()]
+                if mode not in combined:
+                    combined[mode] = []
+                for _, row in df_closed.iterrows():
+                    combined[mode].append({
+                        "exit_time": pd.to_datetime(row["exit_time"]),
+                        "pnl": row["total_pnl"],
+                        "symbol": row["symbol"],
+                    })
+
+    combined_metrics = {}
+    for mode in ["V4", "V5"]:
+        if mode not in combined or not combined[mode]:
+            continue
+        events = sorted(combined[mode], key=lambda x: x["exit_time"])
+        eq = INITIAL_EQUITY
+        peak = eq
+        max_dd = 0.0
+        eq_curve = [{"datetime": START_DATE, "equity": eq}]
+        for ev in events:
+            eq += ev["pnl"]
+            eq_curve.append({"datetime": ev["exit_time"], "equity": eq})
+            if eq > peak:
+                peak = eq
+            dd = (peak - eq) / peak if peak > 0 else 0
+            max_dd = max(max_dd, dd)
+
+        final_eq = eq
+        d1 = datetime.strptime(START_DATE, "%Y-%m-%d")
+        d2 = datetime.strptime(END_DATE, "%Y-%m-%d")
+        years = (d2 - d1).days / 365.25
+        cagr = ((final_eq / INITIAL_EQUITY) ** (1 / years) - 1) if years > 0 and final_eq > 0 else 0
+
+        total_trades = len(events)
+        pnls = [e["pnl"] for e in events]
+        wins = [p for p in pnls if p > 0]
+        losses = [p for p in pnls if p < 0]
+        gp = sum(wins) if wins else 0
+        gl = abs(sum(losses)) if losses else 0
+        pf = gp / gl if gl > 0 else (float('inf') if gp > 0 else 0)
+
+        combined_metrics[mode] = {
+            "trades": total_trades,
+            "pnl": sum(pnls),
+            "pf": pf,
+            "cagr": cagr,
+            "max_dd": max_dd,
+            "win_rate": len(wins) / total_trades if total_trades > 0 else 0,
+            "final_equity": final_eq,
+        }
+
+        # 合算エクイティCSV保存
+        pd.DataFrame(eq_curve).to_csv(output_base / f"{mode}_combined_equity.csv", index=False)
+
     # ==================== 比較表出力 ====================
     print(f"\n\n{'='*100}")
     print(f"比較結果サマリー（initial_equity={INITIAL_EQUITY:,}, risk={RISK_PCT*100}%）")
@@ -241,17 +304,35 @@ def main():
         print(line)
     print("─" * 100)
 
+    # 3通貨合算行
+    print(f"\n{'─'*100}")
+    print(f"3通貨合算（同時保有含む単一エクイティカーブ）")
+    print(f"{'─'*100}")
+    comb_header = f"{'Version':<14} {'Trades':>6} {'WinRate':>8} {'PF':>6} {'CAGR':>7} {'MaxDD':>8} {'PnL':>12} {'FinalEq':>14}"
+    print(comb_header)
+    print("─" * 80)
+    for mode in ["V4", "V5"]:
+        if mode in combined_metrics:
+            cm = combined_metrics[mode]
+            label = f"{mode}({'成行' if mode == 'V4' else '指値'})"
+            line = (f"{label:<14} {cm['trades']:>6} {cm['win_rate']*100:>7.1f}% "
+                    f"{cm['pf']:>6.2f} {cm['cagr']*100:>6.1f}% "
+                    f"{cm['max_dd']*100:>7.2f}% {cm['pnl']:>12,.0f} {cm['final_equity']:>14,.0f}")
+            print(line)
+    print("─" * 80)
+
     # 公平性チェック
     print(f"\n公平性チェック:")
     print(f"  initial_equity = {INITIAL_EQUITY:,} ✓")
     print(f"  risk_pct = {RISK_PCT} ✓")
     print(f"  position_size_invalid = 0 ✓ (全バージョン・全通貨)")
+    print(f"  V4エントリー = signal_bar[i] → bar[i+1].open（1本待ち成行）✓")
+    print(f"  V5バー内SL = 指値fill+SL同バー → SL負け計上（R=-1）✓")
 
     # 30トレード未満の警告
     for r in all_results:
         if r["Trades"] < 30:
             print(f"  ⚠ {r['Symbol']} {r['Version']}: {r['Trades']}件 < 30 → PF/CAGRは参考値")
-            print(f"    → 追加提案: 期間延長（2018-01-01～）にはAPI上限5000本の拡張が必要")
 
     # CSV保存
     df_compare = pd.DataFrame(all_results)
@@ -267,10 +348,12 @@ def main():
         f.write(f"期間: {START_DATE} ~ {END_DATE}\n")
         f.write(f"ポジションサイズ: 連続量（ロット丸めなし）\n")
         f.write(f"position_size_invalid: 0（全バージョン・全通貨）\n\n")
-        f.write(f"V4パラメータ: 1本待ち成行, SL=1.0ATR, TP1=1.5R(50%), TP2=3.0R\n")
+        f.write(f"V4パラメータ: 1本待ち成行(signal[i]→bar[i+1].open), SL=1.0ATR, TP1=1.5R(50%), TP2=3.0R\n")
         f.write(f"V5パラメータ: 指値(EMA±0.10ATR), SL=1.0ATR, TP1=1.5R(50%), EMAクロス退出\n")
+        f.write(f"V5バー内SL: fill+SL同バー → SL負け計上（R=-1、ノートレ禁止）\n")
         f.write(f"共通D1フィルタ: Close>EMA20 & EMA20傾き>0 & ADX14>=18\n")
         f.write(f"共通H4セットアップ: distance<=0.6ATR + engulf/hammer\n\n")
+        f.write("【通貨別】\n")
         f.write(header + "\n")
         f.write("─" * 100 + "\n")
         for r in all_results:
@@ -279,6 +362,17 @@ def main():
                     f"{r['MaxDD']:>8} {r['AvgR']:>6} {r['MedianR']:>8} "
                     f"{r['PnL']:>12} {r['Skipped']:>8}")
             f.write(line + "\n")
+        f.write(f"\n【3通貨合算（同時保有含む単一エクイティカーブ）】\n")
+        f.write(comb_header + "\n")
+        f.write("─" * 80 + "\n")
+        for mode in ["V4", "V5"]:
+            if mode in combined_metrics:
+                cm = combined_metrics[mode]
+                label = f"{mode}({'成行' if mode == 'V4' else '指値'})"
+                line = (f"{label:<14} {cm['trades']:>6} {cm['win_rate']*100:>7.1f}% "
+                        f"{cm['pf']:>6.2f} {cm['cagr']*100:>6.1f}% "
+                        f"{cm['max_dd']*100:>7.2f}% {cm['pnl']:>12,.0f} {cm['final_equity']:>14,.0f}")
+                f.write(line + "\n")
         f.write("\nルックアヘッド排除確認:\n")
         f.write(f"  now=2026-02-16 16:56 JST\n")
         f.write(f"  H4 bar 16:00 bar_end=20:00 > now → 未確定 → 除外 ✓\n")

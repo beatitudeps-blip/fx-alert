@@ -143,7 +143,7 @@ class LineNotifier:
         spread_type = "拡大" if is_widened else "固定"
 
         # pips計算
-        entry_sl_pips = abs(entry_price_exec - sl_price_exec) * 100
+        entry_sl_pips = abs(entry_price_mid - sl_price_mid) * 100
         entry_tp1_pips = abs(tp1_price_mid - entry_price_mid) * 100
         entry_tp2_pips = abs(tp2_price_mid - entry_price_mid) * 100
 
@@ -176,8 +176,7 @@ class LineNotifier:
 
 【エントリー】
 注文種別: {'成行' if entry_mode == 'NEXT_OPEN_MARKET' else '逆指値'}
-推奨価格: {entry_price_exec:.3f}円
-（仲値 {entry_price_mid:.3f} + コスト）
+entry(想定): {next_dt.strftime('%Y-%m-%d %H:%M JST')} / {entry_price_mid:.3f}円
 """
 
         if entry_mode == "BREAKOUT_STOP":
@@ -188,11 +187,10 @@ class LineNotifier:
 【リスク管理】
 口座残高: {equity_jpy:,.0f}円
 最大損失: {actual_risk_jpy:,.0f}円 ({risk_pct*100:.1f}%)
-推奨数量: {units:,.0f}通貨 = {lots:.1f}Lot
-想定コスト: {total_cost:.0f}円（spread {spread_cost:.0f} + slip {slip_cost:.0f}）
+推奨数量: {units/10000:.3f}万通貨（={units:,.0f}通貨）
 
 【エグジット条件】
-初期SL: {sl_price_exec:.3f}円 (-{entry_sl_pips:.1f}pips)
+初期SL: {sl_price_mid:.3f}円 (-{entry_sl_pips:.1f}pips)
 """
 
         # TP1条件
@@ -201,11 +199,13 @@ class LineNotifier:
   → {tp1_pct:.0f}%利確 ({units * exit_config['tp1_close_pct']:,.0f}通貨)
 """
 
-        # 建値移動
-        if exit_config["move_to_be"]:
-            be_buffer = exit_config.get("be_buffer_pips", 0.0)
-            be_price = entry_price_exec + (be_buffer * 0.01 if side == "LONG" else -be_buffer * 0.01)
-            msg += f"""  → TP1後、SLを建値{be_price:.3f}円へ移動
+        # TP1後SL更新（-0.5R）
+        initial_r = abs(entry_price_mid - sl_price_mid)
+        if side == "LONG":
+            post_tp1_sl = entry_price_mid - 0.5 * initial_r
+        else:
+            post_tp1_sl = entry_price_mid + 0.5 * initial_r
+        msg += f"""  → TP1後、SLを-0.5R（{post_tp1_sl:.3f}円）へ繰上げ
 """
 
         # TP2/Trail
@@ -231,16 +231,18 @@ TimeStop: {exit_config['time_stop']}本以内に+0.5R未達なら撤退
 """
 
         msg += f"""
-【みんなのFXコスト前提】
+【参考：コスト目安】
 スプレッド: {spread_pips:.1f}pips（{spread_type}帯）
 スリッページ: {self.config.get_slippage_pips():.1f}pips
+想定コスト: {total_cost:.0f}円（spread {spread_cost:.0f} + slip {slip_cost:.0f}）
 
 【参考情報】
 EMA20: {ema20:.3f}
 ATR: {atr:.3f}
+1R = {equity_jpy * risk_pct:,.0f}円
 
 【操作手順】
-みんなのFX → 新規 → {'成行' if entry_mode == 'NEXT_OPEN_MARKET' else '逆指値'} → {direction_jp} → {lots:.1f}Lot → 発注
+みんなのFX → 新規 → {'成行' if entry_mode == 'NEXT_OPEN_MARKET' else '逆指値'} → {direction_jp} → {units/10000:.3f}万通貨 → 発注
 
 ※本通知はバックテスト検証済みの執行ルールに基づきます
 """
@@ -449,7 +451,7 @@ ATR: {atr:.3f}
         spread_type = "拡大" if is_widened else "固定"
 
         # pips計算
-        entry_sl_pips = abs(entry_price_exec - sl_price_exec) * 100
+        entry_sl_pips = abs(entry_price_mid - sl_price_mid) * 100
         entry_tp1_pips = abs(tp1_price_mid - entry_price_mid) * 100
         entry_tp2_pips = abs(tp2_price_mid - entry_price_mid) * 100
 
@@ -460,26 +462,62 @@ ATR: {atr:.3f}
         block = f"""🚨 {symbol} {emoji} {direction_jp}シグナル
 
 パターン: {pattern}
-エントリー: {entry_price_exec:.3f}円（仲値{entry_price_mid:.3f}＋コスト）
-推奨数量: {units:,.0f}通貨 = {lots:.1f}Lot
+entry(想定): {next_dt.strftime('%Y-%m-%d %H:%M JST')} / {entry_price_mid:.3f}円
+推奨数量: {units/10000:.3f}万通貨（={units:,.0f}通貨）
 リスク: {actual_risk_jpy:,.0f}円（{risk_pct*100:.1f}%）
 
-SL: {sl_price_exec:.3f}円 (-{entry_sl_pips:.1f}pips)
+SL: {sl_price_mid:.3f}円 (-{entry_sl_pips:.1f}pips)
 TP1: {tp1_price_mid:.3f}円 (+{entry_tp1_pips:.1f}pips) → {exit_config['tp1_close_pct']*100:.0f}%利確
 TP2: {tp2_price_mid:.3f}円 (+{entry_tp2_pips:.1f}pips) → 残玉決済
 """
-        if exit_config.get("move_to_be"):
-            block += f"→ TP1後、SLを建値へ移動\n"
+        initial_r = abs(entry_price_mid - sl_price_mid)
+        if side == "LONG":
+            post_tp1_sl = entry_price_mid - 0.5 * initial_r
+        else:
+            post_tp1_sl = entry_price_mid + 0.5 * initial_r
+        block += f"→ TP1後、SLを-0.5R（{post_tp1_sl:.3f}円）へ繰上げ\n"
+        block += f"1R = {equity_jpy * risk_pct:,.0f}円\n"
 
         block += f"""
-スプレッド: {spread_pips:.1f}pips（{spread_type}帯）
-想定コスト: {total_cost:.0f}円
+参考コスト: spread {spread_pips:.1f}pips（{spread_type}帯）/ 約{total_cost:.0f}円
 EMA20: {ema20:.3f}, ATR: {atr:.3f}
 
-操作: みんなのFX→新規→成行→{direction_jp}→{lots:.1f}Lot→発注
+操作: みんなのFX→新規→成行→{direction_jp}→{units/10000:.3f}万通貨→発注
 """
 
         return block
+
+    def create_exit_message(
+        self,
+        symbol: str,
+        side: str,
+        event: str,
+        entry_time: str,
+        entry_price: float,
+        event_time,
+        event_price: float,
+        realized_pnl: float,
+        total_pnl: float,
+        note: str = "",
+    ) -> str:
+        """決済通知メッセージを生成"""
+        direction_jp = "買い" if side == "LONG" else "売り"
+        emoji = "🔼" if side == "LONG" else "🔽"
+        event_time_str = (
+            event_time.strftime('%Y-%m-%d %H:%M JST')
+            if hasattr(event_time, 'strftime') else str(event_time)
+        )
+        msg = f"""✅決済: {symbol} {emoji} {direction_jp}
+
+entry(想定): {entry_time} / {entry_price:.3f}円
+event: {event}
+time: {event_time_str}
+price: {event_price:.3f}円
+確定損益: {realized_pnl:+,.0f}円
+累計損益: {total_pnl:+,.0f}円"""
+        if note:
+            msg += f"\nnote: {note}"
+        return msg
 
     def send_line(self, message: str) -> bool:
         """

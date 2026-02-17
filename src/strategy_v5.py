@@ -64,7 +64,9 @@ def check_daily_environment_short_v5(d1: pd.DataFrame) -> bool:
     )
 
 
-def check_signal_v5(h4: pd.DataFrame, d1: pd.DataFrame) -> dict:
+def check_signal_v5(h4: pd.DataFrame, d1: pd.DataFrame,
+                    distance_atr_ratio: float = DISTANCE_ATR_RATIO,
+                    limit_atr_offset: float = LIMIT_ATR_OFFSET) -> dict:
     """
     V5シグナル判定（指値エントリー版）
 
@@ -116,7 +118,7 @@ def check_signal_v5(h4: pd.DataFrame, d1: pd.DataFrame) -> dict:
     if long_env:
         # distance_to_ema チェック（0.6*ATR以内）
         distance = abs(latest["close"] - latest["ema20"])
-        threshold = DISTANCE_ATR_RATIO * latest["atr14"]
+        threshold = distance_atr_ratio * latest["atr14"]
         if distance > threshold:
             return {**base_info, "signal": None,
                     "reason": f"EMA距離超過（LONG）: {distance:.4f} > {threshold:.4f}"}
@@ -128,7 +130,7 @@ def check_signal_v5(h4: pd.DataFrame, d1: pd.DataFrame) -> dict:
             return {**base_info, "signal": None, "reason": "トリガーパターンなし（LONG）"}
 
         pattern = "Bullish Engulfing" if is_engulfing else "Bullish Hammer"
-        entry_limit = latest["ema20"] - LIMIT_ATR_OFFSET * latest["atr14"]
+        entry_limit = latest["ema20"] - limit_atr_offset * latest["atr14"]
 
         return {
             **base_info,
@@ -140,7 +142,7 @@ def check_signal_v5(h4: pd.DataFrame, d1: pd.DataFrame) -> dict:
     # SHORTシグナルチェック
     if short_env:
         distance = abs(latest["close"] - latest["ema20"])
-        threshold = DISTANCE_ATR_RATIO * latest["atr14"]
+        threshold = distance_atr_ratio * latest["atr14"]
         if distance > threshold:
             return {**base_info, "signal": None,
                     "reason": f"EMA距離超過（SHORT）: {distance:.4f} > {threshold:.4f}"}
@@ -151,7 +153,7 @@ def check_signal_v5(h4: pd.DataFrame, d1: pd.DataFrame) -> dict:
             return {**base_info, "signal": None, "reason": "トリガーパターンなし（SHORT）"}
 
         pattern = "Bearish Engulfing" if is_engulfing else "Bearish Shooting Star"
-        entry_limit = latest["ema20"] + LIMIT_ATR_OFFSET * latest["atr14"]
+        entry_limit = latest["ema20"] + limit_atr_offset * latest["atr14"]
 
         return {
             **base_info,

@@ -13,7 +13,7 @@ V4 vs V5 公平比較バックテストエンジン
 - ポジションサイズ: 連続量（risk_yen / R_pips）、ロット丸めなし
 
 V4（ベースライン）:
-- エントリー: 1本待ち → signal_bar + 2 のOpen で成行
+- エントリー: 1本待ち → signal_bar[i] の次バー bar[i+1].Open で成行
 - 残り50%: 固定 3.0R でTP2
 
 V5（改善案）:
@@ -129,6 +129,8 @@ def run_backtest_fair(
     initial_equity: float = 500000.0,
     risk_pct: float = 0.005,
     use_cache: bool = True,
+    limit_atr_offset: float = 0.10,
+    distance_atr_ratio: float = 0.6,
 ) -> Tuple[List[SimpleTrade], pd.DataFrame, Dict[str, Any]]:
     """
     公平比較バックテスト
@@ -170,6 +172,7 @@ def run_backtest_fair(
     # スキップ記録
     skipped = []
     limit_expired = 0
+    intra_bar_sl = 0
 
     # V5: 指値ペンディング
     pending = None
@@ -260,8 +263,12 @@ def run_backtest_fair(
                 active_trade.remaining_units -= exit_u
                 equity += pnl
                 equity_curve.append({"datetime": t, "equity": equity})
-                # SL→BE
-                active_trade.current_sl = active_trade.entry_price
+                # SL→-0.5R
+                initial_r = abs(active_trade.entry_price - active_trade.sl_price)
+                if side == "LONG":
+                    active_trade.current_sl = active_trade.entry_price - 0.5 * initial_r
+                else:
+                    active_trade.current_sl = active_trade.entry_price + 0.5 * initial_r
 
             # --- V4: TP2（SL非ヒット時のみ）---
             if tp2_hit and active_trade.tp1_hit:
@@ -310,14 +317,6 @@ def run_backtest_fair(
                         sl_p = entry_p + atr * atr_mult
                         tp1_p = entry_p - abs(entry_p - sl_p) * tp1_r
 
-                    # バー内SL判定（保守的：同バーでfillとSL両方→ノートレ）
-                    bar_sl = (bar["low"] <= sl_p) if side == "LONG" else (bar["high"] >= sl_p)
-                    if bar_sl:
-                        skipped.append({"time": t, "side": side,
-                                        "reason": "intra_bar_sl"})
-                        pending = None
-                        continue
-
                     # ポジションサイズ（連続量）
                     units, risk_jpy = calc_position_continuous(equity, risk_pct, entry_p, sl_p)
 
@@ -333,6 +332,28 @@ def run_backtest_fair(
                         tp1_units=tp1_u, tp2_units=tp2_u
                     )
                     trade.fills.append(SimpleFill("ENTRY", t, entry_p, units))
+
+                    # バー内SL判定: 同バーでfillとSL両方 → SL負け(R=-1)として計上
+                    bar_sl = (bar["low"] <= sl_p) if side == "LONG" else (bar["high"] >= sl_p)
+                    if bar_sl:
+                        # 即SL決済（ポジション成立→SL負け）
+                        if side == "LONG":
+                            sl_pnl = (sl_p - entry_p) * units
+                        else:
+                            sl_pnl = (entry_p - sl_p) * units
+                        trade.fills.append(SimpleFill("SL", t, sl_p, units, sl_pnl))
+                        trade.total_pnl = sl_pnl
+                        trade.remaining_units = 0
+                        trade.exit_time = t
+                        trade.exit_reason = "SL"
+                        equity += sl_pnl
+                        equity_curve.append({"datetime": t, "equity": equity})
+                        trades.append(trade)
+                        trade_id += 1
+                        intra_bar_sl += 1
+                        pending = None
+                        continue
+
                     active_trade = trade
                     ema_cross_pending = False
                     trade_id += 1
@@ -348,16 +369,17 @@ def run_backtest_fair(
 
         # ==================== 新規シグナル ====================
         if active_trade is None and (mode == "V4" or pending is None):
-            # V4: i+2が必要、V5: i+1が必要
-            need_ahead = 2 if mode == "V4" else 1
-            if i < len(h4) - need_ahead:
+            # V4/V5共通: i+1が必要
+            if i < len(h4) - 1:
                 # D1確定判定: bar_end = datetime + 1day <= current_time
                 d1_end = d1["datetime"] + pd.Timedelta(days=1)
                 d1_sub = d1[d1_end <= t]
 
                 sig = check_signal_v5(
                     h4.iloc[max(0, i - 50):i + 1],
-                    d1_sub
+                    d1_sub,
+                    distance_atr_ratio=distance_atr_ratio,
+                    limit_atr_offset=limit_atr_offset,
                 )
 
                 if sig["signal"]:
@@ -365,8 +387,8 @@ def run_backtest_fair(
                     atr = sig["atr"]
 
                     if mode == "V4":
-                        # 1本待ち成行: bar[i+2].open
-                        entry_bar = h4.iloc[i + 2]
+                        # 1本待ち成行: signal_bar[i]の次バーbar[i+1].open
+                        entry_bar = h4.iloc[i + 1]
                         entry_t = entry_bar["datetime"]
                         if isinstance(entry_t, pd.Timestamp):
                             entry_t = entry_t.to_pydatetime()
@@ -419,8 +441,827 @@ def run_backtest_fair(
         "executed_trades": len(trades),
         "skipped_count": len(skipped),
         "limit_expired": limit_expired,
+        "intra_bar_sl": intra_bar_sl,
         "skipped_details": skipped,
         "position_size_invalid": 0,  # 連続量なので常に0
+    }
+
+    eq_df = pd.DataFrame(equity_curve)
+    return trades, eq_df, stats
+
+
+# ==================== 退出バリアント研究（単一通貨） ====================
+
+def run_backtest_exit_variant(
+    symbol: str,
+    start_date: str,
+    end_date: str,
+    exit_variant: str,  # "V4_BASE", "V4_EMA_EXIT", "V4_PARTIAL_STOP"
+    api_key: Optional[str] = None,
+    initial_equity: float = 500000.0,
+    risk_pct: float = 0.005,
+    use_cache: bool = True,
+) -> Tuple[List[SimpleTrade], pd.DataFrame, Dict[str, Any]]:
+    """
+    退出方式ABテスト（エントリーは全てV4成行、退出のみ変更）
+
+    V4_BASE:         TP2=3R, TP1後SL→BE
+    V4_EMA_EXIT:     EMA退出, TP1後SL→BE
+    V4_PARTIAL_STOP: TP2=3R, TP1後SL→entry-0.5R
+    """
+    atr_mult = 1.0
+    tp1_r = 1.5
+    tp1_pct = 0.5
+    tp2_r = 3.0
+
+    use_ema_exit = (exit_variant == "V4_EMA_EXIT")
+    use_tp2 = (exit_variant != "V4_EMA_EXIT")
+    use_partial_stop = (exit_variant == "V4_PARTIAL_STOP")
+
+    h4 = fetch_data(symbol, "4h", 5000, api_key, use_cache)
+    d1 = fetch_data(symbol, "1day", 1000, api_key, use_cache)
+
+    tz = ZoneInfo("Asia/Tokyo")
+    h4 = h4[(h4["datetime"] >= start_date) & (h4["datetime"] <= end_date)].reset_index(drop=True)
+    d1 = d1[(d1["datetime"] >= start_date) & (d1["datetime"] <= end_date)].reset_index(drop=True)
+    if h4["datetime"].dt.tz is None:
+        h4["datetime"] = h4["datetime"].dt.tz_localize("UTC").dt.tz_convert(tz)
+    if d1["datetime"].dt.tz is None:
+        d1["datetime"] = d1["datetime"].dt.tz_localize("UTC").dt.tz_convert(tz)
+
+    trades: List[SimpleTrade] = []
+    active_trade: Optional[SimpleTrade] = None
+    equity = initial_equity
+    equity_curve = [{"datetime": h4.iloc[0]["datetime"] if len(h4) > 0 else None,
+                     "equity": equity}]
+    trade_id = 1
+    ema_cross_pending = False
+
+    # 退出分類カウント
+    sl_count = 0
+    be_count = 0
+    partial_sl_count = 0
+    tp2_count = 0
+    ema_exit_count = 0
+
+    for i in range(len(h4)):
+        bar = h4.iloc[i]
+        t = bar["datetime"]
+        if isinstance(t, pd.Timestamp):
+            t = t.to_pydatetime()
+
+        # ==================== 決済チェック ====================
+        if active_trade is not None:
+            side = active_trade.side
+            sl = active_trade.current_sl
+            tp1 = active_trade.tp1_price
+            hi, lo = bar["high"], bar["low"]
+
+            # EMA退出実行（前バー検出→今バーOpen）
+            if use_ema_exit and ema_cross_pending and active_trade.tp1_hit:
+                exit_p = bar["open"]
+                exit_u = active_trade.remaining_units
+                if exit_u > 0:
+                    pnl = (exit_p - active_trade.entry_price) * exit_u if side == "LONG" \
+                        else (active_trade.entry_price - exit_p) * exit_u
+                    active_trade.fills.append(SimpleFill("EMA_CROSS", t, exit_p, exit_u, pnl))
+                    active_trade.total_pnl += pnl
+                    active_trade.remaining_units = 0
+                    active_trade.exit_time = t
+                    active_trade.exit_reason = "EMA_CROSS"
+                    equity += pnl
+                    equity_curve.append({"datetime": t, "equity": equity})
+                    trades.append(active_trade)
+                    active_trade = None
+                    ema_cross_pending = False
+                    ema_exit_count += 1
+                    continue
+
+            # SL判定
+            sl_hit = (lo <= sl) if side == "LONG" else (hi >= sl)
+            tp1_hit_now = False
+            if not active_trade.tp1_hit:
+                tp1_hit_now = (hi >= tp1) if side == "LONG" else (lo <= tp1)
+            tp2_hit = False
+            if use_tp2 and active_trade.tp1_hit:
+                tp2 = active_trade.tp2_price
+                tp2_hit = (hi >= tp2) if side == "LONG" else (lo <= tp2)
+
+            # SL優先
+            if sl_hit:
+                if active_trade.tp1_hit:
+                    if use_partial_stop:
+                        reason = "PARTIAL_SL"
+                        partial_sl_count += 1
+                    else:
+                        reason = "BE"
+                        be_count += 1
+                else:
+                    reason = "SL"
+                    sl_count += 1
+                exit_u = active_trade.remaining_units
+                pnl = (sl - active_trade.entry_price) * exit_u if side == "LONG" \
+                    else (active_trade.entry_price - sl) * exit_u
+                active_trade.fills.append(SimpleFill(reason, t, sl, exit_u, pnl))
+                active_trade.total_pnl += pnl
+                active_trade.remaining_units = 0
+                active_trade.exit_time = t
+                active_trade.exit_reason = reason
+                equity += pnl
+                equity_curve.append({"datetime": t, "equity": equity})
+                trades.append(active_trade)
+                active_trade = None
+                ema_cross_pending = False
+                continue
+
+            # TP1
+            if tp1_hit_now and not active_trade.tp1_hit:
+                active_trade.tp1_hit = True
+                exit_u = active_trade.tp1_units
+                pnl = (tp1 - active_trade.entry_price) * exit_u if side == "LONG" \
+                    else (active_trade.entry_price - tp1) * exit_u
+                active_trade.fills.append(SimpleFill("TP1", t, tp1, exit_u, pnl))
+                active_trade.total_pnl += pnl
+                active_trade.remaining_units -= exit_u
+                equity += pnl
+                equity_curve.append({"datetime": t, "equity": equity})
+                # TP1後SL移動
+                if use_partial_stop:
+                    initial_r = active_trade.atr  # atr_mult=1.0
+                    if side == "LONG":
+                        active_trade.current_sl = active_trade.entry_price - 0.5 * initial_r
+                    else:
+                        active_trade.current_sl = active_trade.entry_price + 0.5 * initial_r
+                else:
+                    active_trade.current_sl = active_trade.entry_price  # BE
+
+            # TP2
+            if tp2_hit and active_trade.tp1_hit:
+                exit_u = active_trade.remaining_units
+                tp2 = active_trade.tp2_price
+                pnl = (tp2 - active_trade.entry_price) * exit_u if side == "LONG" \
+                    else (active_trade.entry_price - tp2) * exit_u
+                active_trade.fills.append(SimpleFill("TP2", t, tp2, exit_u, pnl))
+                active_trade.total_pnl += pnl
+                active_trade.remaining_units = 0
+                active_trade.exit_time = t
+                active_trade.exit_reason = "TP2"
+                equity += pnl
+                equity_curve.append({"datetime": t, "equity": equity})
+                trades.append(active_trade)
+                active_trade = None
+                tp2_count += 1
+                continue
+
+            # EMAクロス検出（V4_EMA_EXITのみ）
+            if use_ema_exit and active_trade is not None and active_trade.tp1_hit and not ema_cross_pending:
+                h4_slice = h4.iloc[max(0, i - 50):i + 1]
+                if _check_ema_cross(h4_slice, side):
+                    ema_cross_pending = True
+
+        # ==================== 新規シグナル（成行のみ） ====================
+        if active_trade is None and i < len(h4) - 1:
+            d1_end = d1["datetime"] + pd.Timedelta(days=1)
+            d1_sub = d1[d1_end <= t]
+            sig = check_signal_v5(h4.iloc[max(0, i - 50):i + 1], d1_sub)
+
+            if sig["signal"]:
+                entry_bar = h4.iloc[i + 1]
+                entry_t = entry_bar["datetime"]
+                if isinstance(entry_t, pd.Timestamp):
+                    entry_t = entry_t.to_pydatetime()
+                entry_p = entry_bar["open"]
+                side = sig["signal"]
+                atr = sig["atr"]
+
+                if side == "LONG":
+                    sl_p = entry_p - atr * atr_mult
+                    tp1_p = entry_p + abs(entry_p - sl_p) * tp1_r
+                    tp2_p = entry_p + abs(entry_p - sl_p) * tp2_r if use_tp2 else 0.0
+                else:
+                    sl_p = entry_p + atr * atr_mult
+                    tp1_p = entry_p - abs(entry_p - sl_p) * tp1_r
+                    tp2_p = entry_p - abs(entry_p - sl_p) * tp2_r if use_tp2 else 0.0
+
+                units, risk_jpy = calc_position_continuous(equity, risk_pct, entry_p, sl_p)
+                trade = SimpleTrade(
+                    trade_id=trade_id, symbol=symbol, side=side,
+                    pattern=sig["pattern"], entry_time=entry_t,
+                    entry_price=entry_p, units=units,
+                    sl_price=sl_p, tp1_price=tp1_p, tp2_price=tp2_p,
+                    atr=atr, risk_jpy=risk_jpy,
+                    tp1_units=units * tp1_pct, tp2_units=units * (1 - tp1_pct),
+                )
+                trade.fills.append(SimpleFill("ENTRY", entry_t, entry_p, units))
+                active_trade = trade
+                ema_cross_pending = False
+                trade_id += 1
+
+    if active_trade is not None:
+        trades.append(active_trade)
+
+    closed = [t for t in trades if t.exit_time is not None]
+    stats = {
+        "exit_variant": exit_variant,
+        "trades": len(closed),
+        "sl_count": sl_count,
+        "be_count": be_count,
+        "partial_sl_count": partial_sl_count,
+        "tp2_count": tp2_count,
+        "ema_exit_count": ema_exit_count,
+    }
+    eq_df = pd.DataFrame(equity_curve)
+    return trades, eq_df, stats
+
+
+# ==================== 退出バリアント研究（ポートフォリオ） ====================
+
+def run_portfolio_exit_variant(
+    symbols: List[str],
+    start_date: str,
+    end_date: str,
+    exit_variant: str,  # "V4_BASE", "V4_EMA_EXIT", "V4_PARTIAL_STOP"
+    api_key: Optional[str] = None,
+    initial_equity: float = 500000.0,
+    risk_pct: float = 0.005,
+    use_cache: bool = True,
+    max_open_positions: int = 2,
+    max_total_risk_pct: float = 0.01,
+) -> Tuple[List[SimpleTrade], pd.DataFrame, Dict[str, Any]]:
+    """
+    ポートフォリオ版・退出バリアント研究（エントリーは全て成行）
+    """
+    atr_mult = 1.0
+    tp1_r = 1.5
+    tp1_pct = 0.5
+    tp2_r = 3.0
+    tz = ZoneInfo("Asia/Tokyo")
+
+    use_ema_exit = (exit_variant == "V4_EMA_EXIT")
+    use_tp2 = (exit_variant != "V4_EMA_EXIT")
+    use_partial_stop = (exit_variant == "V4_PARTIAL_STOP")
+
+    pair_data = {}
+    for sym in symbols:
+        h4 = fetch_data(sym, "4h", 5000, api_key, use_cache)
+        d1 = fetch_data(sym, "1day", 1000, api_key, use_cache)
+        h4 = h4[(h4["datetime"] >= start_date) & (h4["datetime"] <= end_date)].reset_index(drop=True)
+        d1 = d1[(d1["datetime"] >= start_date) & (d1["datetime"] <= end_date)].reset_index(drop=True)
+        if h4["datetime"].dt.tz is None:
+            h4["datetime"] = h4["datetime"].dt.tz_localize("UTC").dt.tz_convert(tz)
+        if d1["datetime"].dt.tz is None:
+            d1["datetime"] = d1["datetime"].dt.tz_localize("UTC").dt.tz_convert(tz)
+        time_map = {}
+        for idx in range(len(h4)):
+            time_map[h4.iloc[idx]["datetime"]] = idx
+        pair_data[sym] = {"h4": h4, "d1": d1, "time_map": time_map}
+
+    all_times = sorted(set(
+        dt for sym in symbols for dt in pair_data[sym]["h4"]["datetime"]
+    ))
+
+    equity = initial_equity
+    equity_curve = [{"datetime": all_times[0] if all_times else None, "equity": equity}]
+    open_trades: Dict[str, dict] = {}
+    pending_orders: Dict[str, dict] = {}
+    trades: List[SimpleTrade] = []
+    trade_id = 1
+
+    skipped_riskcap = 0
+    sl_count = 0
+    be_count = 0
+    partial_sl_count = 0
+    tp2_count = 0
+    ema_exit_count = 0
+
+    def _count_at_risk():
+        return sum(1 for ts in open_trades.values() if not ts["trade"].tp1_hit)
+
+    def _can_enter():
+        return (len(open_trades) < max_open_positions
+                and (_count_at_risk() + 1) * risk_pct <= max_total_risk_pct)
+
+    for t in all_times:
+        bars_at_t = {}
+        for sym in symbols:
+            if t in pair_data[sym]["time_map"]:
+                bars_at_t[sym] = pair_data[sym]["time_map"][t]
+        if not bars_at_t:
+            continue
+
+        # ======== Phase 1: 決済チェック ========
+        for sym in list(open_trades.keys()):
+            if sym not in bars_at_t:
+                continue
+            i = bars_at_t[sym]
+            bar = pair_data[sym]["h4"].iloc[i]
+            h4 = pair_data[sym]["h4"]
+            ts = open_trades[sym]
+            active = ts["trade"]
+            side = active.side
+            sl = active.current_sl
+            tp1 = active.tp1_price
+            hi, lo = bar["high"], bar["low"]
+
+            # EMA退出実行
+            if use_ema_exit and ts["ema_cross_pending"] and active.tp1_hit:
+                exit_p = bar["open"]
+                exit_u = active.remaining_units
+                if exit_u > 0:
+                    pnl = (exit_p - active.entry_price) * exit_u if side == "LONG" \
+                        else (active.entry_price - exit_p) * exit_u
+                    active.fills.append(SimpleFill("EMA_CROSS", t, exit_p, exit_u, pnl))
+                    active.total_pnl += pnl
+                    active.remaining_units = 0
+                    active.exit_time = t
+                    active.exit_reason = "EMA_CROSS"
+                    equity += pnl
+                    equity_curve.append({"datetime": t, "equity": equity})
+                    trades.append(active)
+                    del open_trades[sym]
+                    ema_exit_count += 1
+                    continue
+
+            sl_hit = (lo <= sl) if side == "LONG" else (hi >= sl)
+            tp1_hit_now = False
+            if not active.tp1_hit:
+                tp1_hit_now = (hi >= tp1) if side == "LONG" else (lo <= tp1)
+            tp2_hit = False
+            if use_tp2 and active.tp1_hit:
+                tp2 = active.tp2_price
+                tp2_hit = (hi >= tp2) if side == "LONG" else (lo <= tp2)
+
+            if sl_hit:
+                if active.tp1_hit:
+                    if use_partial_stop:
+                        reason = "PARTIAL_SL"
+                        partial_sl_count += 1
+                    else:
+                        reason = "BE"
+                        be_count += 1
+                else:
+                    reason = "SL"
+                    sl_count += 1
+                exit_u = active.remaining_units
+                pnl = (sl - active.entry_price) * exit_u if side == "LONG" \
+                    else (active.entry_price - sl) * exit_u
+                active.fills.append(SimpleFill(reason, t, sl, exit_u, pnl))
+                active.total_pnl += pnl
+                active.remaining_units = 0
+                active.exit_time = t
+                active.exit_reason = reason
+                equity += pnl
+                equity_curve.append({"datetime": t, "equity": equity})
+                trades.append(active)
+                del open_trades[sym]
+                continue
+
+            if tp1_hit_now and not active.tp1_hit:
+                active.tp1_hit = True
+                exit_u = active.tp1_units
+                pnl = (tp1 - active.entry_price) * exit_u if side == "LONG" \
+                    else (active.entry_price - tp1) * exit_u
+                active.fills.append(SimpleFill("TP1", t, tp1, exit_u, pnl))
+                active.total_pnl += pnl
+                active.remaining_units -= exit_u
+                equity += pnl
+                equity_curve.append({"datetime": t, "equity": equity})
+                if use_partial_stop:
+                    initial_r = active.atr
+                    if side == "LONG":
+                        active.current_sl = active.entry_price - 0.5 * initial_r
+                    else:
+                        active.current_sl = active.entry_price + 0.5 * initial_r
+                else:
+                    active.current_sl = active.entry_price
+
+            if tp2_hit and active.tp1_hit:
+                exit_u = active.remaining_units
+                tp2 = active.tp2_price
+                pnl = (tp2 - active.entry_price) * exit_u if side == "LONG" \
+                    else (active.entry_price - tp2) * exit_u
+                active.fills.append(SimpleFill("TP2", t, tp2, exit_u, pnl))
+                active.total_pnl += pnl
+                active.remaining_units = 0
+                active.exit_time = t
+                active.exit_reason = "TP2"
+                equity += pnl
+                equity_curve.append({"datetime": t, "equity": equity})
+                trades.append(active)
+                del open_trades[sym]
+                tp2_count += 1
+                continue
+
+            if use_ema_exit and sym in open_trades and active.tp1_hit and not ts["ema_cross_pending"]:
+                h4_slice = h4.iloc[max(0, i - 50):i + 1]
+                if _check_ema_cross(h4_slice, side):
+                    open_trades[sym]["ema_cross_pending"] = True
+
+        # ======== Phase 2: ペンディングオーダー処理（成行のみ） ========
+        for sym in list(pending_orders.keys()):
+            if sym not in bars_at_t:
+                continue
+            if sym in open_trades:
+                continue
+            i = bars_at_t[sym]
+            bar = pair_data[sym]["h4"].iloc[i]
+            pend = pending_orders[sym]
+
+            if i == pend["target_idx"]:
+                if _can_enter():
+                    entry_p = bar["open"]
+                    side = pend["side"]
+                    atr = pend["atr"]
+                    if side == "LONG":
+                        sl_p = entry_p - atr * atr_mult
+                        tp1_p = entry_p + abs(entry_p - sl_p) * tp1_r
+                        tp2_p = entry_p + abs(entry_p - sl_p) * tp2_r if use_tp2 else 0.0
+                    else:
+                        sl_p = entry_p + atr * atr_mult
+                        tp1_p = entry_p - abs(entry_p - sl_p) * tp1_r
+                        tp2_p = entry_p - abs(entry_p - sl_p) * tp2_r if use_tp2 else 0.0
+                    units, risk_jpy = calc_position_continuous(equity, risk_pct, entry_p, sl_p)
+                    trade = SimpleTrade(
+                        trade_id=trade_id, symbol=sym, side=side,
+                        pattern=pend["pattern"], entry_time=t,
+                        entry_price=entry_p, units=units,
+                        sl_price=sl_p, tp1_price=tp1_p, tp2_price=tp2_p,
+                        atr=atr, risk_jpy=risk_jpy,
+                        tp1_units=units * tp1_pct, tp2_units=units * (1 - tp1_pct),
+                    )
+                    trade.fills.append(SimpleFill("ENTRY", t, entry_p, units))
+                    open_trades[sym] = {"trade": trade, "ema_cross_pending": False}
+                    trade_id += 1
+                else:
+                    skipped_riskcap += 1
+                del pending_orders[sym]
+            elif i > pend["target_idx"]:
+                del pending_orders[sym]
+
+        # ======== Phase 3: 新規シグナル検出 ========
+        for sym in symbols:
+            if sym not in bars_at_t:
+                continue
+            if sym in open_trades or sym in pending_orders:
+                continue
+            i = bars_at_t[sym]
+            h4 = pair_data[sym]["h4"]
+            d1 = pair_data[sym]["d1"]
+            if i >= len(h4) - 1:
+                continue
+
+            d1_end = d1["datetime"] + pd.Timedelta(days=1)
+            d1_sub = d1[d1_end <= t]
+            sig = check_signal_v5(h4.iloc[max(0, i - 50):i + 1], d1_sub)
+            if sig["signal"]:
+                pending_orders[sym] = {
+                    "type": "market", "target_idx": i + 1,
+                    "side": sig["signal"], "atr": sig["atr"],
+                    "pattern": sig["pattern"],
+                }
+
+    for sym, ts in open_trades.items():
+        trades.append(ts["trade"])
+
+    closed = [t for t in trades if t.exit_time is not None]
+    stats = {
+        "exit_variant": exit_variant,
+        "trades": len(closed),
+        "skipped_riskcap": skipped_riskcap,
+        "sl_count": sl_count,
+        "be_count": be_count,
+        "partial_sl_count": partial_sl_count,
+        "tp2_count": tp2_count,
+        "ema_exit_count": ema_exit_count,
+    }
+    eq_df = pd.DataFrame(equity_curve)
+    return trades, eq_df, stats
+
+
+# ==================== ポートフォリオバックテスト ====================
+
+def run_portfolio_backtest(
+    symbols: List[str],
+    start_date: str,
+    end_date: str,
+    mode: str,  # "V4" or "V5"
+    api_key: Optional[str] = None,
+    initial_equity: float = 500000.0,
+    risk_pct: float = 0.005,
+    use_cache: bool = True,
+    limit_atr_offset: float = 0.10,
+    distance_atr_ratio: float = 0.6,
+    max_open_positions: int = 2,
+    max_total_risk_pct: float = 0.01,
+) -> Tuple[List[SimpleTrade], pd.DataFrame, Dict[str, Any]]:
+    """
+    ポートフォリオバックテスト（複数通貨同時保有・リスク制約つき）
+
+    - 1口座 portfolio_equity で全通貨を運用
+    - entry時 units は当時の portfolio_equity で算出
+    - max_open_positions / max_total_risk_pct 超過ならスキップ
+    """
+    atr_mult = 1.0
+    tp1_r = 1.5
+    tp1_pct = 0.5
+    tp2_r = 3.0
+    tz = ZoneInfo("Asia/Tokyo")
+
+    # データ取得
+    pair_data = {}
+    for sym in symbols:
+        h4 = fetch_data(sym, "4h", 5000, api_key, use_cache)
+        d1 = fetch_data(sym, "1day", 1000, api_key, use_cache)
+        h4 = h4[(h4["datetime"] >= start_date) & (h4["datetime"] <= end_date)].reset_index(drop=True)
+        d1 = d1[(d1["datetime"] >= start_date) & (d1["datetime"] <= end_date)].reset_index(drop=True)
+        if h4["datetime"].dt.tz is None:
+            h4["datetime"] = h4["datetime"].dt.tz_localize("UTC").dt.tz_convert(tz)
+        if d1["datetime"].dt.tz is None:
+            d1["datetime"] = d1["datetime"].dt.tz_localize("UTC").dt.tz_convert(tz)
+        time_map = {}
+        for idx in range(len(h4)):
+            time_map[h4.iloc[idx]["datetime"]] = idx
+        pair_data[sym] = {"h4": h4, "d1": d1, "time_map": time_map}
+
+    # マスタータイムライン
+    all_times_set = set()
+    for sym in symbols:
+        for dt in pair_data[sym]["h4"]["datetime"]:
+            all_times_set.add(dt)
+    all_times = sorted(all_times_set)
+
+    # 状態
+    equity = initial_equity
+    equity_curve = [{"datetime": all_times[0] if all_times else None, "equity": equity}]
+    # sym -> {"trade": SimpleTrade, "ema_cross_pending": bool}
+    open_trades: Dict[str, dict] = {}
+    # sym -> {"type": "market"/"limit", "target_idx": int, ...}
+    pending_orders: Dict[str, dict] = {}
+
+    trades: List[SimpleTrade] = []
+    trade_id = 1
+    skipped_riskcap = 0
+    limit_expired = 0
+    intra_bar_sl = 0
+
+    def _count_at_risk():
+        return sum(1 for ts in open_trades.values() if not ts["trade"].tp1_hit)
+
+    def _can_enter():
+        n_open = len(open_trades)
+        n_risk = _count_at_risk()
+        return (n_open < max_open_positions
+                and (n_risk + 1) * risk_pct <= max_total_risk_pct)
+
+    for t in all_times:
+        # 各ペアのバー情報収集
+        bars_at_t = {}
+        for sym in symbols:
+            if t in pair_data[sym]["time_map"]:
+                idx = pair_data[sym]["time_map"][t]
+                bars_at_t[sym] = idx
+
+        if not bars_at_t:
+            continue
+
+        # ======== Phase 1: 全ペアの決済チェック ========
+        for sym in list(open_trades.keys()):
+            if sym not in bars_at_t:
+                continue
+            i = bars_at_t[sym]
+            bar = pair_data[sym]["h4"].iloc[i]
+            h4 = pair_data[sym]["h4"]
+            ts = open_trades[sym]
+            active = ts["trade"]
+            side = active.side
+            sl = active.current_sl
+            tp1 = active.tp1_price
+            hi, lo = bar["high"], bar["low"]
+
+            # V5: EMAクロス退出実行（前バー検出→今バーOpen）
+            if mode == "V5" and ts["ema_cross_pending"] and active.tp1_hit:
+                exit_p = bar["open"]
+                exit_u = active.remaining_units
+                if exit_u > 0:
+                    pnl = (exit_p - active.entry_price) * exit_u if side == "LONG" \
+                        else (active.entry_price - exit_p) * exit_u
+                    active.fills.append(SimpleFill("EMA_CROSS", t, exit_p, exit_u, pnl))
+                    active.total_pnl += pnl
+                    active.remaining_units = 0
+                    active.exit_time = t
+                    active.exit_reason = "EMA_CROSS"
+                    equity += pnl
+                    equity_curve.append({"datetime": t, "equity": equity})
+                    trades.append(active)
+                    del open_trades[sym]
+                    continue
+
+            # SL判定
+            sl_hit = (lo <= sl) if side == "LONG" else (hi >= sl)
+            tp1_hit = False
+            if not active.tp1_hit:
+                tp1_hit = (hi >= tp1) if side == "LONG" else (lo <= tp1)
+            tp2_hit = False
+            if mode == "V4" and active.tp1_hit:
+                tp2 = active.tp2_price
+                tp2_hit = (hi >= tp2) if side == "LONG" else (lo <= tp2)
+
+            # SL優先
+            if sl_hit:
+                reason = "SL" if not active.tp1_hit else "BE"
+                exit_u = active.remaining_units
+                pnl = (sl - active.entry_price) * exit_u if side == "LONG" \
+                    else (active.entry_price - sl) * exit_u
+                active.fills.append(SimpleFill(reason, t, sl, exit_u, pnl))
+                active.total_pnl += pnl
+                active.remaining_units = 0
+                active.exit_time = t
+                active.exit_reason = reason
+                equity += pnl
+                equity_curve.append({"datetime": t, "equity": equity})
+                trades.append(active)
+                del open_trades[sym]
+                continue
+
+            # TP1
+            if tp1_hit and not active.tp1_hit:
+                active.tp1_hit = True
+                exit_u = active.tp1_units
+                pnl = (tp1 - active.entry_price) * exit_u if side == "LONG" \
+                    else (active.entry_price - tp1) * exit_u
+                active.fills.append(SimpleFill("TP1", t, tp1, exit_u, pnl))
+                active.total_pnl += pnl
+                active.remaining_units -= exit_u
+                equity += pnl
+                equity_curve.append({"datetime": t, "equity": equity})
+                # SL→-0.5R
+                initial_r = abs(active.entry_price - active.sl_price)
+                if side == "LONG":
+                    active.current_sl = active.entry_price - 0.5 * initial_r
+                else:
+                    active.current_sl = active.entry_price + 0.5 * initial_r
+
+            # V4: TP2
+            if tp2_hit and active.tp1_hit:
+                exit_u = active.remaining_units
+                tp2 = active.tp2_price
+                pnl = (tp2 - active.entry_price) * exit_u if side == "LONG" \
+                    else (active.entry_price - tp2) * exit_u
+                active.fills.append(SimpleFill("TP2", t, tp2, exit_u, pnl))
+                active.total_pnl += pnl
+                active.remaining_units = 0
+                active.exit_time = t
+                active.exit_reason = "TP2"
+                equity += pnl
+                equity_curve.append({"datetime": t, "equity": equity})
+                trades.append(active)
+                del open_trades[sym]
+                continue
+
+            # V5: EMAクロス検出
+            if mode == "V5" and sym in open_trades and active.tp1_hit and not ts["ema_cross_pending"]:
+                h4_slice = h4.iloc[max(0, i - 50):i + 1]
+                if _check_ema_cross(h4_slice, side):
+                    open_trades[sym]["ema_cross_pending"] = True
+
+        # ======== Phase 2: ペンディングオーダー処理 ========
+        for sym in list(pending_orders.keys()):
+            if sym not in bars_at_t:
+                continue
+            if sym in open_trades:
+                continue
+            i = bars_at_t[sym]
+            bar = pair_data[sym]["h4"].iloc[i]
+            pend = pending_orders[sym]
+
+            if i == pend["target_idx"]:
+                if pend["type"] == "market":
+                    # V4: 成行
+                    if _can_enter():
+                        entry_p = bar["open"]
+                        side = pend["side"]
+                        atr = pend["atr"]
+                        if side == "LONG":
+                            sl_p = entry_p - atr * atr_mult
+                            tp1_p = entry_p + abs(entry_p - sl_p) * tp1_r
+                            tp2_p = entry_p + abs(entry_p - sl_p) * tp2_r
+                        else:
+                            sl_p = entry_p + atr * atr_mult
+                            tp1_p = entry_p - abs(entry_p - sl_p) * tp1_r
+                            tp2_p = entry_p - abs(entry_p - sl_p) * tp2_r
+                        units, risk_jpy = calc_position_continuous(equity, risk_pct, entry_p, sl_p)
+                        trade = SimpleTrade(
+                            trade_id=trade_id, symbol=sym, side=side,
+                            pattern=pend["pattern"], entry_time=t,
+                            entry_price=entry_p, units=units,
+                            sl_price=sl_p, tp1_price=tp1_p, tp2_price=tp2_p,
+                            atr=atr, risk_jpy=risk_jpy,
+                            tp1_units=units * tp1_pct, tp2_units=units * (1 - tp1_pct),
+                        )
+                        trade.fills.append(SimpleFill("ENTRY", t, entry_p, units))
+                        open_trades[sym] = {"trade": trade, "ema_cross_pending": False}
+                        trade_id += 1
+                    else:
+                        skipped_riskcap += 1
+                    del pending_orders[sym]
+
+                elif pend["type"] == "limit":
+                    # V5: 指値fill判定
+                    filled = (bar["low"] <= pend["limit"]) if pend["side"] == "LONG" \
+                        else (bar["high"] >= pend["limit"])
+                    if filled:
+                        if _can_enter():
+                            entry_p = pend["limit"]
+                            side = pend["side"]
+                            atr = pend["atr"]
+                            if side == "LONG":
+                                sl_p = entry_p - atr * atr_mult
+                                tp1_p = entry_p + abs(entry_p - sl_p) * tp1_r
+                            else:
+                                sl_p = entry_p + atr * atr_mult
+                                tp1_p = entry_p - abs(entry_p - sl_p) * tp1_r
+                            units, risk_jpy = calc_position_continuous(equity, risk_pct, entry_p, sl_p)
+                            trade = SimpleTrade(
+                                trade_id=trade_id, symbol=sym, side=side,
+                                pattern=pend["pattern"], entry_time=t,
+                                entry_price=entry_p, units=units,
+                                sl_price=sl_p, tp1_price=tp1_p, tp2_price=0.0,
+                                atr=atr, risk_jpy=risk_jpy,
+                                tp1_units=units * tp1_pct, tp2_units=units * (1 - tp1_pct),
+                            )
+                            trade.fills.append(SimpleFill("ENTRY", t, entry_p, units))
+                            # バー内SL判定
+                            bar_sl = (bar["low"] <= sl_p) if side == "LONG" else (bar["high"] >= sl_p)
+                            if bar_sl:
+                                sl_pnl = (sl_p - entry_p) * units if side == "LONG" \
+                                    else (entry_p - sl_p) * units
+                                trade.fills.append(SimpleFill("SL", t, sl_p, units, sl_pnl))
+                                trade.total_pnl = sl_pnl
+                                trade.remaining_units = 0
+                                trade.exit_time = t
+                                trade.exit_reason = "SL"
+                                equity += sl_pnl
+                                equity_curve.append({"datetime": t, "equity": equity})
+                                trades.append(trade)
+                                trade_id += 1
+                                intra_bar_sl += 1
+                            else:
+                                open_trades[sym] = {"trade": trade, "ema_cross_pending": False}
+                                trade_id += 1
+                        else:
+                            skipped_riskcap += 1
+                    else:
+                        limit_expired += 1
+                    del pending_orders[sym]
+
+            elif i > pend["target_idx"]:
+                del pending_orders[sym]
+
+        # ======== Phase 3: 新規シグナル検出 ========
+        for sym in symbols:
+            if sym not in bars_at_t:
+                continue
+            if sym in open_trades or sym in pending_orders:
+                continue
+            i = bars_at_t[sym]
+            h4 = pair_data[sym]["h4"]
+            d1 = pair_data[sym]["d1"]
+            if i >= len(h4) - 1:
+                continue
+
+            d1_end = d1["datetime"] + pd.Timedelta(days=1)
+            d1_sub = d1[d1_end <= t]
+            sig = check_signal_v5(
+                h4.iloc[max(0, i - 50):i + 1],
+                d1_sub,
+                distance_atr_ratio=distance_atr_ratio,
+                limit_atr_offset=limit_atr_offset,
+            )
+            if sig["signal"]:
+                if mode == "V4":
+                    pending_orders[sym] = {
+                        "type": "market", "target_idx": i + 1,
+                        "side": sig["signal"], "atr": sig["atr"],
+                        "pattern": sig["pattern"],
+                    }
+                else:
+                    pending_orders[sym] = {
+                        "type": "limit", "target_idx": i + 1,
+                        "side": sig["signal"], "limit": sig["entry_limit"],
+                        "atr": sig["atr"], "pattern": sig["pattern"],
+                    }
+
+    # 未決済トレードを記録
+    for sym, ts in open_trades.items():
+        trades.append(ts["trade"])
+
+    closed = [t for t in trades if t.exit_time is not None]
+    stats = {
+        "mode": mode,
+        "total_trades": len(closed),
+        "skipped_riskcap": skipped_riskcap,
+        "limit_expired": limit_expired,
+        "intra_bar_sl": intra_bar_sl,
     }
 
     eq_df = pd.DataFrame(equity_curve)
