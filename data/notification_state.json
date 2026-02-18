@@ -1,6 +1,6 @@
 {
   "last_signals": {},
-  "last_sent_bar_dt": "2026-02-18T08:00:00+09:00",
+  "last_sent_bar_dt": "2026-02-18T12:00:00+09:00",
   "open_trades": {
     "EUR/JPY": {
       "symbol": "EUR/JPY",
@@ -17,7 +17,7 @@
       "remaining_units": 4000.0,
       "risk_jpy": 1946.0,
       "total_pnl": 0.0,
-      "last_checked_bar_dt": "2026-02-18T08:00:00+09:00"
+      "last_checked_bar_dt": "2026-02-18T12:00:00+09:00"
     }
   }
 }
