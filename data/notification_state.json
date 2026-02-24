@@ -1,6 +1,6 @@
 {
   "last_signals": {},
-  "last_sent_bar_dt": "2026-02-24T12:00:00+09:00",
+  "last_sent_bar_dt": "2026-02-24T16:00:00+09:00",
   "open_trades": {
     "EUR/JPY": {
       "symbol": "EUR/JPY",
@@ -17,24 +17,7 @@
       "remaining_units": 3500.0,
       "risk_jpy": 2088.0,
       "total_pnl": 1564.5000000000095,
-      "last_checked_bar_dt": "2026-02-24T12:00:00+09:00"
-    },
-    "USD/JPY": {
-      "symbol": "USD/JPY",
-      "side": "SHORT",
-      "entry_time_str": "2026-02-24 12:00 JST",
-      "entry_bar_dt": "2026-02-24T12:00:00+09:00",
-      "entry_price": 154.42,
-      "sl_price": 154.765,
-      "current_sl": 154.765,
-      "tp1_price": 153.903,
-      "tp2_price": 153.386,
-      "tp1_hit": false,
-      "units": 6000.0,
-      "remaining_units": 6000.0,
-      "risk_jpy": 2068.0,
-      "total_pnl": 0.0,
-      "last_checked_bar_dt": "2026-02-24T12:00:00+09:00"
+      "last_checked_bar_dt": "2026-02-24T16:00:00+09:00"
     }
   }
 }
