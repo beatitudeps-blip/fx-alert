@@ -1,21 +1,21 @@
 {
   "last_signals": {},
-  "last_sent_bar_dt": "2026-03-10T20:00:00+09:00",
+  "last_sent_bar_dt": "2026-03-11T00:00:00+09:00",
   "open_trades": {
-    "USD/JPY": {
-      "symbol": "USD/JPY",
+    "EUR/JPY": {
+      "symbol": "EUR/JPY",
       "side": "LONG",
-      "entry_time_str": "2026-03-11 00:00 JST",
-      "entry_bar_dt": "2026-03-11T00:00:00+09:00",
-      "entry_price": 157.893,
-      "sl_price": 157.525,
-      "current_sl": 157.525,
-      "tp1_price": 158.445,
-      "tp2_price": 158.997,
+      "entry_time_str": "2026-03-11 04:00 JST",
+      "entry_bar_dt": "2026-03-11T04:00:00+09:00",
+      "entry_price": 183.437,
+      "sl_price": 183.067,
+      "current_sl": 183.067,
+      "tp1_price": 183.992,
+      "tp2_price": 184.547,
       "tp1_hit": false,
       "units": 6000.0,
       "remaining_units": 6000.0,
-      "risk_jpy": 2208.0,
+      "risk_jpy": 2221.0,
       "total_pnl": 0.0
     }
   }
