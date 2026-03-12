@@ -1,6 +1,6 @@
 {
   "last_signals": {},
-  "last_sent_bar_dt": "2026-03-12T20:00:00+09:00",
+  "last_sent_bar_dt": "2026-03-13T00:00:00+09:00",
   "open_trades": {
     "EUR/JPY": {
       "symbol": "EUR/JPY",
@@ -17,7 +17,7 @@
       "remaining_units": 3000.0,
       "risk_jpy": 2221.0,
       "total_pnl": 1664.9999999999352,
-      "last_checked_bar_dt": "2026-03-12T20:00:00+09:00"
+      "last_checked_bar_dt": "2026-03-13T00:00:00+09:00"
     },
     "USD/JPY": {
       "symbol": "USD/JPY",
@@ -34,7 +34,7 @@
       "remaining_units": 2500.0,
       "risk_jpy": 2118.0,
       "total_pnl": 1590.0000000000603,
-      "last_checked_bar_dt": "2026-03-12T20:00:00+09:00"
+      "last_checked_bar_dt": "2026-03-13T00:00:00+09:00"
     }
   }
 }
