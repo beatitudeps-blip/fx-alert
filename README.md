@@ -379,7 +379,31 @@ cat data/notification_state.json
 
 ---
 
-## 📚 ドキュメント
+## 📊 D1/W1 日足戦略 (D1_W1_EMA20_PULLBACK_V1)
+
+週足フィルター付き・日足EMA20押し戻り戦略。4H足戦略とは別の戦略として並行運用可能。
+
+- 対象通貨: USD/JPY, EUR/JPY, GBP/JPY
+- 判定: 日足確定後に1日1回 (GitHub Actions UTC 22:30)
+- 発注: 手動 (みんなのFX)
+
+### 運用を始めるには
+
+1. GitHub Secrets に `TWELVEDATA_API_KEY`, `LINE_CHANNEL_ACCESS_TOKEN`, `LINE_USER_ID` を設定
+2. `daily_signal.yml` を有効化
+3. 詳細は [docs/runbook.md](docs/runbook.md) を参照
+
+### 仕様書
+
+- [docs/strategy.md](docs/strategy.md) — 戦略仕様
+- [docs/data_spec.md](docs/data_spec.md) — データ仕様
+- [docs/operations.md](docs/operations.md) — 運用仕様
+- [docs/runbook.md](docs/runbook.md) — 実運用手順書
+- [docs/implementation_plan.md](docs/implementation_plan.md) — 実装計画
+
+---
+
+## 📚 ドキュメント (V4 4H足戦略)
 
 - **[CRON_SETUP_GUIDE.md](CRON_SETUP_GUIDE.md)**: cron設定の詳細ガイド
 - **[BATCH_NOTIFY_README.md](BATCH_NOTIFY_README.md)**: バッチ通知の仕組み
