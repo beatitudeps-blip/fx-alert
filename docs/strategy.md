@@ -20,10 +20,9 @@
 当面の対象通貨は以下の3通貨とする。
 
 - USD/JPY
-- EUR/JPY
 - AUD/JPY
 
-通貨追加は、既存3通貨で十分な検証と実運用実績が出てから行う。
+通貨追加は、既存2通貨で十分な検証と実運用実績が出てから行う。
 
 ---
 
@@ -128,25 +127,18 @@ ema20_today - ema20_yesterday
 
 ---
 
-## 8. EMA20近辺と乖離の定義
+## 8. EMA20距離フィルター
 
-### 8.1 EMA20近辺
+### 8.1 有効範囲
 
-押し・戻りの有効条件として、以下を満たすこと。
-
-```text
-abs(Daily Close - Daily EMA20) <= 0.5 * ATR14
-```
-
-### 8.2 EMA乖離過大
-
-以下に該当する場合は見送りとする。
+押し・戻りの有効条件として、EMA20からの距離が以下の範囲内であること。
 
 ```text
-abs(Daily Close - Daily EMA20) > 1.0 * ATR14
+0.2 * ATR14 <= abs(Daily Close - Daily EMA20) <= 1.2 * ATR14
 ```
 
-理由コードは `X` とする。
+下限（0.2 * ATR14）未満の場合：EMA20に近すぎてエントリー効率が悪い。
+上限（1.2 * ATR14）超過の場合：乖離過大として見送り。理由コード `X`。
 
 ---
 
@@ -238,9 +230,8 @@ close < open
 
 * WEEKLY_UP
 * DAILY_UP
-* Daily Close が Daily EMA20 から 0.5ATR 以内
+* EMA距離フィルター通過（0.2ATR <= 距離 <= 1.2ATR）
 * Bullish Engulfing または Bullish Pin Bar が成立
-* EMA乖離過大ではない
 * 追いかけエントリー条件に該当しない
 * 週足抵抗フィルターに該当しない
 * 既存ポジション条件に違反しない
@@ -252,13 +243,23 @@ close < open
 
 * WEEKLY_DOWN
 * DAILY_DOWN
-* Daily Close が Daily EMA20 から 0.5ATR 以内
+* EMA距離フィルター通過（0.2ATR <= 距離 <= 1.2ATR）
 * Bearish Engulfing または Bearish Pin Bar が成立
-* EMA乖離過大ではない
 * 追いかけエントリー条件に該当しない
 * 週足支持フィルターに該当しない
 * 既存ポジション条件に違反しない
 * 総リスク上限に違反しない
+
+### 10.3 エントリー価格（指値）
+
+シグナル確定後、ATRオフセットによる指値エントリーを使用する。
+
+```text
+BUY:  entry_price = Daily Close - 0.25 * ATR14
+SELL: entry_price = Daily Close + 0.25 * ATR14
+```
+
+翌営業日中に指値が約定しなかった場合はシグナル無効とする。
 
 ---
 

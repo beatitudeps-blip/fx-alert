@@ -1,6 +1,7 @@
 """
-最終バックテスト: USD/JPY + EUR/JPY + AUD/JPY
-TP1=1.5R / TP2=3.0R / spread=0.2pip(0.05R) / slippage=0.05R
+最終バックテスト: USD/JPY + AUD/JPY
+ATR指値エントリー(0.25*ATR) + EMA距離フィルター(0.2-1.2*ATR)
+TP1=1.5R / TP2=3.0R / spread=0.05R / slippage=0.05R
 """
 import sys
 from pathlib import Path
@@ -33,6 +34,9 @@ TP1_R = 1.5
 TP2_R = 3.0
 SPREAD_R = 0.05
 SLIP_R = 0.05
+ENTRY_OFFSET_ATR = 0.25   # 指値エントリー: close ∓ 0.25*ATR
+EMA_DIST_MIN = 0.2        # EMA距離下限: 0.2*ATR
+EMA_DIST_MAX = 1.2        # EMA距離上限: 1.2*ATR
 
 
 def check_signal(d1, w1):
@@ -62,8 +66,11 @@ def check_signal(d1, w1):
     if dt == "DAILY_NEUTRAL": rc.append("D")
     if al == "NO_TRADE" and "W" not in rc and "D" not in rc: rc.append("A")
 
-    _, _, pullback_ok = check_ema_distance(close, de, atr)
-    if check_ema_divergence(close, de, atr): rc.append("X")
+    # EMA距離フィルター: 0.2*ATR <= |price - EMA20| <= 1.2*ATR
+    ema_dist_ratio = abs(close - de) / atr
+    pullback_ok = EMA_DIST_MIN <= ema_dist_ratio <= EMA_DIST_MAX
+    if ema_dist_ratio > EMA_DIST_MAX:
+        rc.append("X")
 
     today = {k: float(d1[k].iloc[-1]) for k in ["open","close","high","low"]}
     prev = {k: float(d1[k].iloc[-2]) for k in ["open","close","high","low"]}
@@ -76,11 +83,13 @@ def check_signal(d1, w1):
     side = ""
     entry = sl = risk = 0.0
     if al == "BUY_ONLY":
-        side, entry = "BUY", close
+        side = "BUY"
+        entry = close - ENTRY_OFFSET_ATR * atr  # 指値エントリー
         sl = today["low"] - 0.1 * atr
         risk = entry - sl
     elif al == "SELL_ONLY":
-        side, entry = "SELL", close
+        side = "SELL"
+        entry = close + ENTRY_OFFSET_ATR * atr  # 指値エントリー
         sl = today["high"] + 0.1 * atr
         risk = sl - entry
 
@@ -149,6 +158,14 @@ def run(sym, d1, w1):
             continue
 
         sig = check_signal(d1.iloc[:i+1], w1s)
+        if sig["decision"] == "ENTRY_OK":
+            # 指値エントリー約定判定: 当日 high/low の範囲内か
+            bar_h = float(d1["high"].iloc[i])
+            bar_l = float(d1["low"].iloc[i])
+            if sig["side"] == "BUY" and sig["entry"] < bar_l:
+                sig = {"decision": "SKIP", "reason_codes": ["LIMIT_NOT_FILLED"]}
+            elif sig["side"] == "SELL" and sig["entry"] > bar_h:
+                sig = {"decision": "SKIP", "reason_codes": ["LIMIT_NOT_FILLED"]}
         if sig["decision"] == "SKIP":
             for r in sig["reason_codes"]: skips[r] = skips.get(r, 0) + 1
         elif sig["decision"] == "ENTRY_OK":
@@ -206,7 +223,7 @@ def metrics(trades, init_eq, yrs):
 if __name__ == "__main__":
     api_key = check_api_key(required=True)
     yrs = (pd.to_datetime(END) - pd.to_datetime(START)).days / 365.25
-    pairs = ["USD/JPY", "EUR/JPY", "AUD/JPY"]
+    pairs = ["USD/JPY", "AUD/JPY"]
 
     print(f"\n{'='*80}")
     print(f"FINAL BACKTEST")
@@ -216,6 +233,8 @@ if __name__ == "__main__":
     print(f"TP:       TP1={TP1_R}R / TP2={TP2_R}R")
     print(f"SL:       0.1 * ATR14")
     print(f"Risk:     {RISK_PCT*100:.1f}%")
+    print(f"Entry:    limit offset={ENTRY_OFFSET_ATR}*ATR")
+    print(f"EMA:      [{EMA_DIST_MIN}, {EMA_DIST_MAX}]*ATR")
     print(f"Cost:     spread=0.05R + slippage=0.05R")
     print(f"Equity:   {EQUITY:,.0f} JPY")
     print(f"{'='*80}\n")
@@ -249,13 +268,13 @@ if __name__ == "__main__":
         all_trades.extend(tr)
 
     # Combined
-    m = metrics(all_trades, EQUITY * 3, yrs)
+    m = metrics(all_trades, EQUITY * len(pairs), yrs)
     cl = [t for t in all_trades if t.get("exit_reason") != "OPEN"]
     er = {}
     for t in cl: er[t["exit_reason"]] = er.get(t["exit_reason"], 0) + 1
 
     print(f"{'='*80}")
-    print(f"COMBINED (3 pairs)")
+    print(f"COMBINED ({len(pairs)} pairs)")
     print(f"{'='*80}")
     print(f"  Trades:     {m['trades']}  ({m['tpy']:.1f}/yr)")
     print(f"  Win Rate:   {m['wr']:.1f}%")

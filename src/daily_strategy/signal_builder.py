@@ -38,6 +38,9 @@ TP2_R = 3.0            # TP2 = 3.0R (残50%利確)
 SPREAD_COST_R = 0.05   # spread 0.2pip ≈ 0.05R
 SLIPPAGE_R = 0.05      # slippage ≈ 0.05R
 RISK_PCT = 0.005       # 0.5% リスク
+ENTRY_OFFSET_ATR = 0.25  # 指値エントリー: close ∓ 0.25*ATR14
+EMA_DIST_MIN_ATR = 0.2   # EMA距離下限: 0.2*ATR14
+EMA_DIST_MAX_ATR = 1.2   # EMA距離上限: 1.2*ATR14
 DAILY_BARS = 100       # 日足取得本数
 WEEKLY_BARS = 50       # 週足取得本数
 
@@ -51,6 +54,9 @@ def _get_strategy_params(config) -> dict:
         "spread_cost_r": SPREAD_COST_R,
         "slippage_r": SLIPPAGE_R,
         "risk_pct": RISK_PCT,
+        "entry_offset_atr": ENTRY_OFFSET_ATR,
+        "ema_dist_min_atr": EMA_DIST_MIN_ATR,
+        "ema_dist_max_atr": EMA_DIST_MAX_ATR,
     }
     if config is None:
         return defaults
@@ -96,6 +102,9 @@ def build_single_signal(
     tp2_r = sp["tp2_r"]
     spread_cost_r = sp["spread_cost_r"]
     slippage_r = sp["slippage_r"]
+    entry_offset_atr = sp["entry_offset_atr"]
+    ema_dist_min_atr = sp["ema_dist_min_atr"]
+    ema_dist_max_atr = sp["ema_dist_max_atr"]
 
     csv_pair = pair_to_csv(pair)
     jst = ZoneInfo("Asia/Tokyo")
@@ -152,9 +161,10 @@ def build_single_signal(
     if alignment == "NO_TRADE" and "W" not in reason_codes and "D" not in reason_codes:
         reason_codes.append("A")
 
-    # --- EMA 距離判定 ---
-    ema_dist_abs, ema_dist_ratio, pullback_ok = check_ema_distance(close_price, daily_ema20, atr14)
-    is_divergent = check_ema_divergence(close_price, daily_ema20, atr14)
+    # --- EMA 距離判定（カスタム範囲: min_atr < |price - EMA20| < max_atr） ---
+    ema_dist_abs = abs(close_price - daily_ema20)
+    ema_dist_ratio = ema_dist_abs / atr14 if atr14 > 0 else 0.0
+    pullback_ok = ema_dist_min_atr <= ema_dist_ratio <= ema_dist_max_atr
 
     signal.update({
         "ema_distance_abs": round(ema_dist_abs, 5),
@@ -162,7 +172,7 @@ def build_single_signal(
         "pullback_ok": pullback_ok,
     })
 
-    if is_divergent:
+    if ema_dist_ratio > ema_dist_max_atr:
         reason_codes.append("X")
 
     # --- パターン検出 ---
@@ -214,14 +224,14 @@ def build_single_signal(
 
     if alignment == "BUY_ONLY":
         entry_side = "BUY"
-        planned_entry = close_price
+        planned_entry = close_price - entry_offset_atr * atr14  # 指値エントリー
         planned_sl = today["low"] - sl_atr_buffer * atr14
         risk_price = planned_entry - planned_sl
         planned_tp1 = planned_entry + tp1_r * risk_price
         planned_tp2 = planned_entry + tp2_r * risk_price
     elif alignment == "SELL_ONLY":
         entry_side = "SELL"
-        planned_entry = close_price
+        planned_entry = close_price + entry_offset_atr * atr14  # 指値エントリー
         planned_sl = today["high"] + sl_atr_buffer * atr14
         risk_price = planned_sl - planned_entry
         planned_tp1 = planned_entry - tp1_r * risk_price
