@@ -23,6 +23,7 @@ SIGNALS_COLUMNS = [
     "entry_side", "planned_entry_price", "planned_sl_price",
     "planned_tp1_price", "planned_tp2_price",
     "planned_risk_jpy", "planned_lot",
+    "estimated_cost_r", "estimated_cost_jpy",
     "signal_note",
 ]
 

@@ -2,6 +2,19 @@
 broker: minnafx
 timezone: Asia/Tokyo
 
+# D1/W1 戦略パラメータ
+strategy:
+  pairs: ["USD/JPY", "EUR/JPY", "AUD/JPY"]
+  risk_pct: 0.005          # 0.5% per trade
+  tp1_r: 1.5               # TP1 = 1.5R (50%利確)
+  tp2_r: 3.0               # TP2 = 3.0R (残50%利確)
+  sl_atr_buffer: 0.1       # SL = signal_low/high ± 0.1 * ATR14
+  spread_cost_r: 0.05      # spread想定コスト (≈0.2pip)
+  slippage_r: 0.05         # slippage想定コスト
+  max_positions: 2          # 同時保有上限
+  max_jpy_risk_pct: 0.01   # JPYクロス合計リスク上限
+  consecutive_loss_stop: 3  # 連敗停止ライン
+
 trade_unit:
   # 通常通貨ペア（USD/JPY, EUR/JPY, GBP/JPY）はこの定義
   lot_size_units: 10000          # 1.0Lot = 10,000通貨
@@ -50,6 +63,9 @@ spread:
     "GBP/JPY":
       fixed: 0.9
       widened: 14.9
+    "AUD/JPY":
+      fixed: 0.4
+      widened: 8.9
 
 maintenance:
   # 日次メンテ中はレート配信停止/約定しない（FAQ）

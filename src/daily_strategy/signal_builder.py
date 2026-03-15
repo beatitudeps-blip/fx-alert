@@ -2,8 +2,10 @@
 シグナル組み立てモジュール
 strategy.md / data_spec.md 準拠
 """
-from datetime import datetime
+from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
+
+import pandas as pd
 
 from src.data import fetch_data
 from src.indicators import calculate_ema, calculate_atr
@@ -29,13 +31,33 @@ from src.daily_strategy.bar_checker import (
     check_consecutive_losses,
 )
 
-# --- 定数 ---
+# --- デフォルト定数（config 未指定時のフォールバック） ---
 SL_ATR_BUFFER = 0.1    # SL = signal_low/high ± 0.1 * ATR14
-TP1_R = 1.0            # TP1 = 1R
-TP2_R = 2.0            # TP2 = 2R
+TP1_R = 1.5            # TP1 = 1.5R (50%利確)
+TP2_R = 3.0            # TP2 = 3.0R (残50%利確)
+SPREAD_COST_R = 0.05   # spread 0.2pip ≈ 0.05R
+SLIPPAGE_R = 0.05      # slippage ≈ 0.05R
 RISK_PCT = 0.005       # 0.5% リスク
 DAILY_BARS = 100       # 日足取得本数
 WEEKLY_BARS = 50       # 週足取得本数
+
+
+def _get_strategy_params(config) -> dict:
+    """config.config['strategy'] から戦略パラメータを取得。未設定ならデフォルト値を返す。"""
+    defaults = {
+        "sl_atr_buffer": SL_ATR_BUFFER,
+        "tp1_r": TP1_R,
+        "tp2_r": TP2_R,
+        "spread_cost_r": SPREAD_COST_R,
+        "slippage_r": SLIPPAGE_R,
+        "risk_pct": RISK_PCT,
+    }
+    if config is None:
+        return defaults
+    strategy = getattr(config, 'config', {}).get('strategy', {})
+    if not strategy:
+        return defaults
+    return {k: strategy.get(k, v) for k, v in defaults.items()}
 
 
 def pair_to_csv(pair: str) -> str:
@@ -67,6 +89,14 @@ def build_single_signal(
     Returns:
         signal レコード辞書 (data_spec.md signals.csv 列に対応)
     """
+    # config から戦略パラメータを取得（未設定ならデフォルト値）
+    sp = _get_strategy_params(config)
+    sl_atr_buffer = sp["sl_atr_buffer"]
+    tp1_r = sp["tp1_r"]
+    tp2_r = sp["tp2_r"]
+    spread_cost_r = sp["spread_cost_r"]
+    slippage_r = sp["slippage_r"]
+
     csv_pair = pair_to_csv(pair)
     jst = ZoneInfo("Asia/Tokyo")
     generated_date_jst = generated_at_utc.replace(tzinfo=ZoneInfo("UTC")).astimezone(jst).strftime("%Y-%m-%d")
@@ -185,17 +215,17 @@ def build_single_signal(
     if alignment == "BUY_ONLY":
         entry_side = "BUY"
         planned_entry = close_price
-        planned_sl = today["low"] - SL_ATR_BUFFER * atr14
+        planned_sl = today["low"] - sl_atr_buffer * atr14
         risk_price = planned_entry - planned_sl
-        planned_tp1 = planned_entry + TP1_R * risk_price
-        planned_tp2 = planned_entry + TP2_R * risk_price
+        planned_tp1 = planned_entry + tp1_r * risk_price
+        planned_tp2 = planned_entry + tp2_r * risk_price
     elif alignment == "SELL_ONLY":
         entry_side = "SELL"
         planned_entry = close_price
-        planned_sl = today["high"] + SL_ATR_BUFFER * atr14
+        planned_sl = today["high"] + sl_atr_buffer * atr14
         risk_price = planned_sl - planned_entry
-        planned_tp1 = planned_entry - TP1_R * risk_price
-        planned_tp2 = planned_entry - TP2_R * risk_price
+        planned_tp1 = planned_entry - tp1_r * risk_price
+        planned_tp2 = planned_entry - tp2_r * risk_price
 
     # --- 週足抵抗/支持フィルター ---
     weekly_room_price = 0.0
@@ -270,6 +300,10 @@ def build_single_signal(
             planned_lot = round(raw_units / 1000, 1) * 0.1
             planned_risk_jpy = planned_lot * 10000 * risk_price
 
+    # --- コスト見積もり ---
+    estimated_cost_r = spread_cost_r + slippage_r if decision == "ENTRY_OK" else 0.0
+    estimated_cost_jpy = planned_risk_jpy * estimated_cost_r if decision == "ENTRY_OK" else 0.0
+
     signal.update({
         "decision": decision,
         "reason_codes": ";".join(reason_codes) if reason_codes else "",
@@ -280,6 +314,8 @@ def build_single_signal(
         "planned_tp2_price": round(planned_tp2, 3) if decision == "ENTRY_OK" else "",
         "planned_risk_jpy": round(planned_risk_jpy, 2) if decision == "ENTRY_OK" else "",
         "planned_lot": round(planned_lot, 1) if decision == "ENTRY_OK" else "",
+        "estimated_cost_r": round(estimated_cost_r, 3) if decision == "ENTRY_OK" else "",
+        "estimated_cost_jpy": round(estimated_cost_jpy, 2) if decision == "ENTRY_OK" else "",
         "signal_note": "",
     })
 
@@ -308,7 +344,12 @@ def build_daily_signals(
     for pair in pairs:
         try:
             daily_df = fetch_data(pair, "1day", DAILY_BARS, api_key=api_key, use_cache=True)
-            weekly_df = fetch_data(pair, "1week", WEEKLY_BARS, api_key=api_key, use_cache=True)
+            weekly_df_raw = fetch_data(pair, "1week", WEEKLY_BARS, api_key=api_key, use_cache=True)
+
+            # 当週の未完成バーを除外（前週の確定済み週足のみ使用）
+            today = generated_at_utc.date()
+            monday = today - timedelta(days=today.weekday())
+            weekly_df = weekly_df_raw[weekly_df_raw["datetime"] < pd.Timestamp(monday)]
 
             is_updated, latest_bar_dt = is_daily_bar_updated(daily_df, pair, state)
             if not is_updated:
@@ -367,6 +408,7 @@ def _build_no_data_signal(pair: str, run_id: str, generated_at_utc: datetime, no
         "entry_side": "", "planned_entry_price": "", "planned_sl_price": "",
         "planned_tp1_price": "", "planned_tp2_price": "",
         "planned_risk_jpy": "", "planned_lot": "",
+        "estimated_cost_r": "", "estimated_cost_jpy": "",
         "signal_note": note,
     }
 
