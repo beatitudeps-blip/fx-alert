@@ -15,11 +15,11 @@ V4 統合バックテストエンジン（みんなのFX実運用対応）
 """
 import pandas as pd
 from typing import List, Tuple, Optional, Dict, Any
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
-from .data import fetch_data
+from .data import fetch_data, fetch_data_range
 from .strategy import check_signal
 from .config_loader import BrokerConfig
 from .broker_costs.minnafx import MinnafxCostModel
@@ -78,16 +78,25 @@ def run_backtest_v4_integrated(
     # コストモデル初期化
     cost_model = MinnafxCostModel(config)
 
-    # データ取得
-    h4 = fetch_data(symbol, "4h", 5000, api_key, use_cache)
-    d1 = fetch_data(symbol, "1day", 1000, api_key, use_cache)
+    # データ取得（日付範囲指定でチャンク分割取得）
+    # EMA20 計算のため開始日より前のデータも取得（D1: 60日, H4: 120日）
+    _start = datetime.strptime(start_date, "%Y-%m-%d")
+    _h4_start = (_start - timedelta(days=120)).strftime("%Y-%m-%d")
+    _d1_start = (_start - timedelta(days=60)).strftime("%Y-%m-%d")
+
+    print(f"  Fetching 4H data: {_h4_start} ~ {end_date}")
+    h4 = fetch_data_range(symbol, "4h", _h4_start, end_date, api_key, use_cache)
+    print(f"  Fetching D1 data: {_d1_start} ~ {end_date}")
+    d1 = fetch_data_range(symbol, "1day", _d1_start, end_date, api_key, use_cache)
 
     # タイムゾーン設定（JST）
     tz = config.tz
 
     # 日付フィルタリング
+    # H4: start_date~end_dateに絞る（ループ対象）
+    # D1: EMA20ウォームアップのためstart_date前のデータも保持
     h4 = h4[(h4["datetime"] >= start_date) & (h4["datetime"] <= end_date)].reset_index(drop=True)
-    d1 = d1[(d1["datetime"] >= start_date) & (d1["datetime"] <= end_date)].reset_index(drop=True)
+    d1 = d1[d1["datetime"] <= end_date].reset_index(drop=True)
 
     # DataFrameのdatetimeカラムにタイムゾーン情報を付加
     if h4["datetime"].dt.tz is None:
