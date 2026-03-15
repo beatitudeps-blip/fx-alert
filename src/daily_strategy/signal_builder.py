@@ -276,7 +276,11 @@ def build_single_signal(
             reason_codes.append("C")
 
     # --- event_risk ---
+    # 主要イベントリスト（将来的にカレンダーAPI連携可能）
+    # 現時点では manual_check を出力し、ユーザーが最終確認する
+    # 対象: FOMC, US_CPI, US_NFP, BOJ, RBA
     signal["event_risk"] = "manual_check"
+    signal["event_risk_events"] = "FOMC,US_CPI,US_NFP,BOJ,RBA"
 
     # --- 最終判定 ---
     if alignment == "NO_TRADE" or reason_codes:
@@ -326,6 +330,8 @@ def build_single_signal(
         "planned_lot": round(planned_lot, 1) if decision == "ENTRY_OK" else "",
         "estimated_cost_r": round(estimated_cost_r, 3) if decision == "ENTRY_OK" else "",
         "estimated_cost_jpy": round(estimated_cost_jpy, 2) if decision == "ENTRY_OK" else "",
+        "order_status": "PENDING" if decision == "ENTRY_OK" else "",
+        "time_stop_days": 7 if decision == "ENTRY_OK" else "",
         "signal_note": "",
     })
 

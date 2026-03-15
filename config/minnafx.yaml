@@ -16,7 +16,21 @@ strategy:
   slippage_r: 0.05         # slippage想定コスト
   max_positions: 2          # 同時保有上限
   max_jpy_risk_pct: 0.01   # JPYクロス合計リスク上限
-  consecutive_loss_stop: 3  # 連敗停止ライン
+  consecutive_loss_stop: 3  # 連敗停止ライン（ライブ用）
+  time_stop_days: 7          # 7営業日後にタイムストップ
+  order_expiry_bars: 1       # 指値注文有効期限: 1日足バー
+
+# フォワードテスト運用ルール
+forward_test:
+  consecutive_loss_pause: 6  # 6連敗で一時停止
+  max_dd_pct_pause: 10.0     # DD 10%超で一時停止
+  min_trades_before_change: 20  # 最初の20トレードはパラメータ変更禁止
+  event_risk_events:         # 手動確認対象イベント
+    - FOMC
+    - US_CPI
+    - US_NFP
+    - BOJ
+    - RBA
 
 trade_unit:
   # 通常通貨ペア（USD/JPY, EUR/JPY, GBP/JPY）はこの定義
