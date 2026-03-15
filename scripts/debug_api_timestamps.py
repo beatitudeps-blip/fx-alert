@@ -11,7 +11,7 @@ from zoneinfo import ZoneInfo
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-api_key = os.environ.get("TWELVEDATA_API_KEY", "8c92b81341dd4e3794deaa30fcea7bc9")
+api_key = os.environ.get("TWELVEDATA_API_KEY", "")
 
 print("=" * 80)
 print("Twelve Data API タイムスタンプ確認")

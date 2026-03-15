@@ -9,7 +9,7 @@ from run_walk_forward import run_walk_forward_analysis
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 if __name__ == "__main__":
-    api_key = os.environ.get("TWELVEDATA_API_KEY", "8c92b81341dd4e3794deaa30fcea7bc9")
+    api_key = os.environ.get("TWELVEDATA_API_KEY", "")
 
     # テスト: 最初の5窓のみ（2024-01-01 ~ 2024-09-30）
     df = run_walk_forward_analysis(

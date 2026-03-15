@@ -239,7 +239,7 @@ def run_walk_forward_analysis(
 
 
 if __name__ == "__main__":
-    api_key = os.environ.get("TWELVEDATA_API_KEY", "8c92b81341dd4e3794deaa30fcea7bc9")
+    api_key = os.environ.get("TWELVEDATA_API_KEY", "")
 
     df = run_walk_forward_analysis(
         symbols=["EUR/JPY", "USD/JPY", "GBP/JPY"],

@@ -6,7 +6,7 @@ import numpy as np
 from datetime import datetime
 
 # ====== CONFIG ======
-TWELVEDATA_API_KEY = os.getenv("TWELVEDATA_API_KEY", "8c92b81341dd4e3794deaa30fcea7bc9")
+TWELVEDATA_API_KEY = os.getenv("TWELVEDATA_API_KEY", "")
 CURRENCIES = ["USD/JPY", "EUR/JPY", "GBP/JPY"]
 DAYS = 720
 INTERVAL = "4h"

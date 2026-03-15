@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 from datetime import datetime, timedelta
 
 # ====== CONFIG ======
-TWELVEDATA_API_KEY = os.getenv("TWELVEDATA_API_KEY", "8c92b81341dd4e3794deaa30fcea7bc9")
+TWELVEDATA_API_KEY = os.getenv("TWELVEDATA_API_KEY", "")
 INITIAL_CAPITAL = 436000  # 円
 RISK_PER_TRADE = 0.01  # 1.0%
 EMA_PERIOD = 20

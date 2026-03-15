@@ -443,7 +443,7 @@ def main():
     ap.add_argument("--outputsize-d1", type=int, default=1500)
     args = ap.parse_args()
 
-    apikey = os.environ.get("TWELVEDATA_API_KEY", "8c92b81341dd4e3794deaa30fcea7bc9")
+    apikey = os.environ.get("TWELVEDATA_API_KEY", "")
 
     symbols = [s.strip() for s in args.symbols.split(",") if s.strip()]
     all_trades: list[Trade] = []

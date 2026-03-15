@@ -1,6 +1,10 @@
 # Data files
 *.csv
 *.png
+data/cache/
+data/reports/
+data/results_*/
+data/daily_state.json
 
 # Python
 __pycache__/

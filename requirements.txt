@@ -4,3 +4,4 @@ numpy
 matplotlib
 pyyaml
 python-dotenv
+pytest
