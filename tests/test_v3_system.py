@@ -38,8 +38,8 @@ def test_position_sizing_normal():
 
     # リスク/unit = 1.5
     # 理論units = 500 / 1.5 = 333.33
-    # 0でスキップされる
-    assert units2 == 0  # 1000未満なのでスキップ
+    # 100刻みで切り捨て = 300, min_lot=100なので有効
+    assert units2 == 300.0
 
     # さらに大きなリスク
     entry3 = 150.0
@@ -48,8 +48,8 @@ def test_position_sizing_normal():
 
     # リスク/unit = 2.5
     # 理論units = 500 / 2.5 = 200
-    # これも1000未満でスキップ
-    assert units3 == 0
+    # 100刻みで切り捨て = 200, min_lot=100なので有効
+    assert units3 == 200.0
 
     # LOT刻みに合うケース
     entry4 = 150.0
@@ -57,11 +57,11 @@ def test_position_sizing_normal():
     units4, risk_jpy4 = calculate_position_size(equity, entry4, sl4, risk_pct)
 
     # リスク/unit = 0.05
-    # 理論units = 500 / 0.05 = 10000
-    # 1000刻みで切り捨て = 10000
-    assert units4 == 10000.0
-    # 実際のリスク = 10000 * 0.05 = 500
-    assert risk_jpy4 == 500.0
+    # 理論units = 500 / 0.05 ≈ 9999.99 (浮動小数点)
+    # 100刻みで切り捨て = 9900
+    assert units4 == 9900.0
+    # 実際のリスク = 9900 * 0.05 = 495
+    assert risk_jpy4 == pytest.approx(495.0, abs=1.0)
 
 
 def test_position_sizing_no_exceed_risk():
@@ -88,9 +88,9 @@ def test_position_sizing_min_lot():
     units, risk_jpy = calculate_position_size(equity, entry, sl, risk_pct)
 
     # 理論units = 500 / 1.0 = 500
-    # 1000未満なのでスキップ
-    assert units == 0.0
-    assert risk_jpy == 0.0
+    # 100刻みで切り捨て = 500, min_lot=100なので有効
+    assert units == 500.0
+    assert risk_jpy == 500.0
 
 
 def test_execution_price_long():

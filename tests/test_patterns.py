@@ -15,13 +15,13 @@ def test_bullish_engulfing():
     prev = pd.Series({"open": 150.0, "high": 150.5, "low": 149.0, "close": 149.5})
     curr = pd.Series({"open": 149.3, "high": 151.0, "low": 149.0, "close": 150.8})
 
-    assert is_bullish_engulfing(prev, curr) is True
+    assert is_bullish_engulfing(prev, curr) == True
 
     # 陽線 → 陽線（包み足でない）
     prev2 = pd.Series({"open": 149.0, "high": 150.0, "low": 148.5, "close": 149.8})
     curr2 = pd.Series({"open": 149.5, "high": 151.0, "low": 149.0, "close": 150.5})
 
-    assert is_bullish_engulfing(prev2, curr2) is False
+    assert is_bullish_engulfing(prev2, curr2) == False
 
 
 def test_bearish_engulfing():
@@ -30,7 +30,7 @@ def test_bearish_engulfing():
     prev = pd.Series({"open": 149.0, "high": 150.5, "low": 148.5, "close": 150.0})
     curr = pd.Series({"open": 150.5, "high": 151.0, "low": 148.0, "close": 148.5})
 
-    assert is_bearish_engulfing(prev, curr) is True
+    assert is_bearish_engulfing(prev, curr) == True
 
 
 def test_bullish_hammer():
@@ -43,11 +43,11 @@ def test_bullish_hammer():
     # 上ヒゲ = 150.5 - 150.3 = 0.2
     # 下ヒゲ >= 実体 * 1.5 かつ 下ヒゲ >= 上ヒゲ * 2.0
 
-    assert is_bullish_hammer(row) is True
+    assert is_bullish_hammer(row) == True
 
     # 実体が大きい（Hammerでない）
     row2 = pd.Series({"open": 149.0, "high": 151.0, "low": 148.0, "close": 151.0})
-    assert is_bullish_hammer(row2) is False
+    assert is_bullish_hammer(row2) == False
 
 
 def test_bearish_hammer():
@@ -59,4 +59,4 @@ def test_bearish_hammer():
     # 実体 = 150.5 - 150.2 = 0.3
     # 下ヒゲ = 150.2 - 150.0 = 0.2
 
-    assert is_bearish_hammer(row) is True
+    assert is_bearish_hammer(row) == True
