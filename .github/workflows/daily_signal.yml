@@ -2,10 +2,10 @@ name: Daily Signal - D1/W1 EMA20 Pullback Strategy
 
 # 日足確定後に日次1回実行
 # Forex daily bar closes at 17:00 ET = 22:00 UTC (standard) / 21:00 UTC (DST)
-# 22:30 UTC に実行し、bar_checker で最新日足更新を確認する
+# UTC 23:00 に実行し、bar_checker で最新日足更新を確認する
 on:
   schedule:
-    - cron: '30 22 * * 1-5'  # UTC 22:30, Mon-Fri
+    - cron: '0 23 * * *'  # UTC 23:00 daily (after NY close)
 
   workflow_dispatch:
     inputs:
@@ -30,6 +30,7 @@ jobs:
   daily-signal:
     name: Daily Signal Check & Notify
     runs-on: ubuntu-latest
+    timeout-minutes: 10
 
     permissions:
       contents: write
@@ -80,8 +81,8 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          # signals.csv, error_log.csv, daily_state.json, reports
-          git add -f data/signals.csv data/error_log.csv data/daily_state.json data/reports/ 2>/dev/null || true
+          # signals.csv, error_log.csv, daily_state.json, forward_test_log.csv, reports
+          git add -f data/signals.csv data/error_log.csv data/daily_state.json data/forward_test_log.csv data/reports/ 2>/dev/null || true
 
           if git diff --staged --quiet; then
             echo "No changes to commit"
@@ -102,6 +103,7 @@ jobs:
             data/signals.csv
             data/error_log.csv
             data/daily_state.json
+            data/forward_test_log.csv
             data/reports/
           retention-days: 14
 
