@@ -81,8 +81,8 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          # signals.csv, error_log.csv, daily_state.json, forward_test_log.csv, reports
-          git add -f data/signals.csv data/error_log.csv data/daily_state.json data/forward_test_log.csv data/reports/ 2>/dev/null || true
+          # signals.csv, error_log.csv, daily_state.json, forward_test_log.csv, daily_signal_log.csv, reports
+          git add -f data/signals.csv data/error_log.csv data/daily_state.json data/forward_test_log.csv data/daily_signal_log.csv data/reports/ 2>/dev/null || true
 
           if git diff --staged --quiet; then
             echo "No changes to commit"
@@ -104,6 +104,7 @@ jobs:
             data/error_log.csv
             data/daily_state.json
             data/forward_test_log.csv
+            data/daily_signal_log.csv
             data/reports/
           retention-days: 14
 

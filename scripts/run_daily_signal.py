@@ -19,7 +19,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from src.daily_strategy import STRATEGY_VERSION
 from src.daily_strategy.signal_builder import build_daily_signals
-from src.daily_strategy.csv_output import append_signals_csv, append_error_log
+from src.daily_strategy.csv_output import append_signals_csv, append_error_log, append_daily_signal_log
 from src.daily_strategy.report_output import write_daily_report
 from src.daily_strategy.notifier import send_daily_notification
 from src.daily_strategy.bar_checker import load_daily_state, save_daily_state
@@ -100,6 +100,9 @@ def main():
     print("\n--- Output ---")
     append_signals_csv(signals)
     print("signals.csv updated")
+
+    append_daily_signal_log(signals)
+    print("daily_signal_log.csv updated")
 
     if errors:
         append_error_log(errors)
