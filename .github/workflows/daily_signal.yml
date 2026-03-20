@@ -51,6 +51,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
+          pip install gspread google-auth google-api-python-client
 
       - name: Run Daily Signal
         env:
@@ -74,6 +75,33 @@ jobs:
             --risk-pct 0.005 \
             --config config/minnafx.yaml \
             $(if [ "${DRY_RUN}" = "true" ]; then echo "--dry-run"; fi)
+
+      - name: Export to Google Sheets
+        if: success()
+        continue-on-error: true
+        env:
+          GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
+          GOOGLE_SHEETS_SPREADSHEET_ID: ${{ secrets.GOOGLE_SHEETS_SPREADSHEET_ID }}
+        run: |
+          if [ -z "${GOOGLE_SERVICE_ACCOUNT_JSON}" ]; then
+            echo "WARN: GOOGLE_SERVICE_ACCOUNT_JSON not set, skipping Sheets export"
+          else
+            python scripts/export_to_google.py
+          fi
+
+      - name: Build & publish daily summary
+        if: success()
+        continue-on-error: true
+        env:
+          GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
+          GOOGLE_DAILY_SUMMARY_DOC_ID: ${{ secrets.GOOGLE_DAILY_SUMMARY_DOC_ID }}
+        run: |
+          if [ -z "${GOOGLE_SERVICE_ACCOUNT_JSON}" ] || [ -z "${GOOGLE_DAILY_SUMMARY_DOC_ID}" ]; then
+            echo "WARN: Google Docs credentials not set, saving local only"
+            python scripts/build_daily_summary.py --local-only
+          else
+            python scripts/build_daily_summary.py
+          fi
 
       - name: Commit output files
         if: always()
