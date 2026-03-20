@@ -13,9 +13,9 @@ daily_signal_log.csv → Google Sheets 追記スクリプト
     GOOGLE_SHEETS_SPREADSHEET_ID
 """
 import argparse
-import csv
 import logging
 import sys
+import time
 from datetime import datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
@@ -24,7 +24,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 sys.path.insert(0, str(Path(__file__).parent))
 
 from google_client import get_gspread_client, get_env
-from summary_renderer import load_daily_signal_log, filter_by_date
+from summary_renderer import load_daily_signal_log, filter_by_date, _extract_date
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 logger = logging.getLogger(__name__)
@@ -37,15 +37,30 @@ HEADER = [
     "atr", "ema20", "event_risk",
 ]
 
+MAX_RETRIES = 3
+RETRY_DELAY = 5  # seconds
+
 
 def get_today_jst() -> str:
     return datetime.now(ZoneInfo("Asia/Tokyo")).strftime("%Y-%m-%d")
 
 
+def _retry(func, *args, **kwargs):
+    """Google API 呼び出しを最大 MAX_RETRIES 回リトライする。"""
+    for attempt in range(1, MAX_RETRIES + 1):
+        try:
+            return func(*args, **kwargs)
+        except Exception as e:
+            if attempt == MAX_RETRIES:
+                raise
+            logger.warning("リトライ %d/%d: %s", attempt, MAX_RETRIES, e)
+            time.sleep(RETRY_DELAY * attempt)
+
+
 def export_to_sheets(date_jst: str, dry_run: bool = False) -> int:
     """
     指定日の daily_signal_log 行を Google Sheets に追記する。
-    重複判定: date_jst + pair + run_id の組み合わせ。
+    重複判定: date_jst(日付部分) + pair + run_id の組み合わせ。
     Returns: 追記した行数。
     """
     # ローカルCSVから対象日のデータを取得
@@ -66,28 +81,38 @@ def export_to_sheets(date_jst: str, dry_run: bool = False) -> int:
 
     # Google Sheets に接続
     spreadsheet_id = get_env("GOOGLE_SHEETS_SPREADSHEET_ID")
-    client = get_gspread_client()
-    spreadsheet = client.open_by_key(spreadsheet_id)
+    client = _retry(get_gspread_client)
+    spreadsheet = _retry(client.open_by_key, spreadsheet_id)
 
     # シートを取得または作成
     try:
         worksheet = spreadsheet.worksheet(SHEET_NAME)
     except Exception:
         logger.info("シート '%s' が存在しないため作成します", SHEET_NAME)
-        worksheet = spreadsheet.add_worksheet(title=SHEET_NAME, rows=1000, cols=len(HEADER))
-        worksheet.append_row(HEADER, value_input_option="RAW")
+        worksheet = _retry(
+            spreadsheet.add_worksheet, title=SHEET_NAME, rows=1000, cols=len(HEADER)
+        )
+        _retry(worksheet.append_row, HEADER, value_input_option="RAW")
 
     # 既存データから重複チェック用キーを取得
-    existing = worksheet.get_all_records()
+    existing = _retry(worksheet.get_all_records)
     existing_keys = set()
     for row in existing:
-        key = (str(row.get("date_jst", "")), str(row.get("pair", "")), str(row.get("run_id", "")))
+        key = (
+            _extract_date(str(row.get("date_jst", ""))),
+            str(row.get("pair", "")),
+            str(row.get("run_id", "")),
+        )
         existing_keys.add(key)
 
     # 重複を除外して追記
     new_rows = []
     for r in target_rows:
-        key = (r.get("date_jst", ""), r.get("pair", ""), r.get("run_id", ""))
+        key = (
+            _extract_date(r.get("date_jst", "")),
+            r.get("pair", ""),
+            r.get("run_id", ""),
+        )
         if key in existing_keys:
             logger.info("重複スキップ: %s", key)
             continue
@@ -98,7 +123,7 @@ def export_to_sheets(date_jst: str, dry_run: bool = False) -> int:
         logger.info("追記する新規行はありません（全て重複）")
         return 0
 
-    worksheet.append_rows(new_rows, value_input_option="RAW")
+    _retry(worksheet.append_rows, new_rows, value_input_option="RAW")
     logger.info("Google Sheets に %d 行追記しました", len(new_rows))
     return len(new_rows)
 

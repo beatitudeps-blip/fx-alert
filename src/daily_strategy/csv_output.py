@@ -121,20 +121,37 @@ def append_daily_signal_log(signals: list, output_dir: Path = None):
 
             for sig in signals:
                 decision = sig.get("decision", "")
-                reason_codes = sig.get("reason_codes", "")
+                reason_codes_raw = sig.get("reason_codes", "")
+
+                # reason_code はソート済み ; 結合に正規化
+                if reason_codes_raw:
+                    codes = sorted(set(c.strip() for c in reason_codes_raw.split(";") if c.strip()))
+                    reason_codes = ";".join(codes)
+                else:
+                    reason_codes = ""
 
                 # status マッピング: ENTRY_OK → ENTRY, それ以外はそのまま
                 status = "ENTRY" if decision == "ENTRY_OK" else decision
 
+                # direction: BUY / SELL / BUY_ONLY / SELL_ONLY / blank
+                # NO_TRADE は入れない
+                direction = sig.get("entry_side", "")
+                if not direction:
+                    alignment = sig.get("alignment", "")
+                    if alignment in ("BUY_ONLY", "SELL_ONLY"):
+                        direction = alignment
+                    else:
+                        direction = ""
+
                 row = {
-                    "date_jst": sig.get("generated_date_jst", ""),
+                    "date_jst": sig.get("generated_datetime_jst", "") or sig.get("generated_date_jst", ""),
                     "run_id": sig.get("run_id", ""),
                     "version": sig.get("strategy_version", ""),
                     "pair": sig.get("pair", ""),
                     "status": status,
                     "reason_code": reason_codes,
                     "reason_text": _reason_codes_to_text(reason_codes),
-                    "direction": sig.get("entry_side", "") or sig.get("alignment", ""),
+                    "direction": direction,
                     "entry": sig.get("planned_entry_price", ""),
                     "sl": sig.get("planned_sl_price", ""),
                     "tp1": sig.get("planned_tp1_price", ""),

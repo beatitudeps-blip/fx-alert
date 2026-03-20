@@ -38,19 +38,30 @@ def load_daily_signal_log(data_dir: Path = None) -> list[dict]:
         return list(csv.DictReader(f))
 
 
+def _extract_date(date_jst_value: str) -> str:
+    """date_jst 列から日付部分 (YYYY-MM-DD) を抽出する。
+    '2026-03-20 08:29:00' → '2026-03-20'
+    '2026-03-20' → '2026-03-20'
+    """
+    if not date_jst_value:
+        return ""
+    return date_jst_value[:10]
+
+
 def filter_by_date(rows: list[dict], date_jst: str) -> list[dict]:
-    """指定日付の行だけ返す。"""
-    return [r for r in rows if r.get("date_jst") == date_jst]
+    """指定日付の行だけ返す。date_jst が時刻付きでも日付部分で比較する。"""
+    target_date = date_jst[:10]
+    return [r for r in rows if _extract_date(r.get("date_jst", "")) == target_date]
 
 
 def filter_recent_days(rows: list[dict], date_jst: str, days: int = 5) -> list[dict]:
     """指定日から過去N営業日分の行を返す（日付ベース、厳密な営業日ではない）。"""
-    target = datetime.strptime(date_jst, "%Y-%m-%d").date()
+    target = datetime.strptime(date_jst[:10], "%Y-%m-%d").date()
     start = target - timedelta(days=days * 2)  # 余裕をもって取得
     filtered = []
     dates_seen = set()
     for r in reversed(rows):
-        d = r.get("date_jst", "")
+        d = _extract_date(r.get("date_jst", ""))
         if not d:
             continue
         row_date = datetime.strptime(d, "%Y-%m-%d").date()
@@ -61,7 +72,7 @@ def filter_recent_days(rows: list[dict], date_jst: str, days: int = 5) -> list[d
     # 日付が多すぎたら直近N日分に絞る
     unique_dates = sorted(dates_seen, reverse=True)[:days]
     date_set = set(unique_dates)
-    return [r for r in filtered if datetime.strptime(r["date_jst"], "%Y-%m-%d").date() in date_set]
+    return [r for r in filtered if datetime.strptime(_extract_date(r["date_jst"]), "%Y-%m-%d").date() in date_set]
 
 
 def summarize_signals(rows: list[dict]) -> dict:

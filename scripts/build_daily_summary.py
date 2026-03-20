@@ -17,6 +17,7 @@ NotebookLM向けに整形された「FX_Daily_Summary_Latest」ドキュメン�
 import argparse
 import logging
 import sys
+import time
 from datetime import datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
@@ -36,9 +37,24 @@ logger = logging.getLogger(__name__)
 
 REPORTS_DIR = Path(__file__).parent.parent / "data" / "reports"
 
+MAX_RETRIES = 3
+RETRY_DELAY = 5  # seconds
+
 
 def get_today_jst() -> str:
     return datetime.now(ZoneInfo("Asia/Tokyo")).strftime("%Y-%m-%d")
+
+
+def _retry(func, *args, **kwargs):
+    """Google API 呼び出しを最大 MAX_RETRIES 回リトライする。"""
+    for attempt in range(1, MAX_RETRIES + 1):
+        try:
+            return func(*args, **kwargs)
+        except Exception as e:
+            if attempt == MAX_RETRIES:
+                raise
+            logger.warning("リトライ %d/%d: %s", attempt, MAX_RETRIES, e)
+            time.sleep(RETRY_DELAY * attempt)
 
 
 def save_local_summary(text: str, date_jst: str) -> Path:
@@ -57,10 +73,10 @@ def update_google_doc(text: str, doc_id: str):
     """
     from google_client import get_docs_service
 
-    service = get_docs_service()
+    service = _retry(get_docs_service)
 
     # 現在のドキュメントを取得して本文の長さを確認
-    doc = service.documents().get(documentId=doc_id).execute()
+    doc = _retry(service.documents().get(documentId=doc_id).execute)
     body = doc.get("body", {})
     content = body.get("content", [])
 
@@ -91,10 +107,12 @@ def update_google_doc(text: str, doc_id: str):
         }
     })
 
-    service.documents().batchUpdate(
-        documentId=doc_id,
-        body={"requests": requests},
-    ).execute()
+    _retry(
+        service.documents().batchUpdate(
+            documentId=doc_id,
+            body={"requests": requests},
+        ).execute
+    )
 
     logger.info("Google Docs 更新完了: doc_id=%s", doc_id)
 

@@ -108,7 +108,9 @@ def build_single_signal(
 
     csv_pair = pair_to_csv(pair)
     jst = ZoneInfo("Asia/Tokyo")
-    generated_date_jst = generated_at_utc.replace(tzinfo=ZoneInfo("UTC")).astimezone(jst).strftime("%Y-%m-%d")
+    generated_datetime_jst = generated_at_utc.replace(tzinfo=ZoneInfo("UTC")).astimezone(jst)
+    generated_date_jst = generated_datetime_jst.strftime("%Y-%m-%d")
+    generated_datetime_jst_str = generated_datetime_jst.strftime("%Y-%m-%d %H:%M:%S")
 
     signal = {
         "signal_id": build_signal_id(pair, generated_at_utc),
@@ -116,6 +118,7 @@ def build_single_signal(
         "strategy_version": STRATEGY_VERSION,
         "generated_at_utc": generated_at_utc.strftime("%Y-%m-%dT%H:%M:%SZ"),
         "generated_date_jst": generated_date_jst,
+        "generated_datetime_jst": generated_datetime_jst_str,
         "pair": csv_pair,
     }
 
@@ -320,7 +323,7 @@ def build_single_signal(
 
     signal.update({
         "decision": decision,
-        "reason_codes": ";".join(reason_codes) if reason_codes else "",
+        "reason_codes": ";".join(sorted(set(reason_codes))) if reason_codes else "",
         "entry_side": entry_side if decision == "ENTRY_OK" else "",
         "planned_entry_price": round(planned_entry, 3) if decision == "ENTRY_OK" else "",
         "planned_sl_price": round(planned_sl, 3) if decision == "ENTRY_OK" else "",
@@ -404,12 +407,14 @@ def build_daily_signals(
 def _build_no_data_signal(pair: str, run_id: str, generated_at_utc: datetime, note: str) -> dict:
     """NO_DATA シグナルを生成する。"""
     jst = ZoneInfo("Asia/Tokyo")
+    dt_jst = generated_at_utc.replace(tzinfo=ZoneInfo("UTC")).astimezone(jst)
     return {
         "signal_id": build_signal_id(pair, generated_at_utc),
         "run_id": run_id,
         "strategy_version": STRATEGY_VERSION,
         "generated_at_utc": generated_at_utc.strftime("%Y-%m-%dT%H:%M:%SZ"),
-        "generated_date_jst": generated_at_utc.replace(tzinfo=ZoneInfo("UTC")).astimezone(jst).strftime("%Y-%m-%d"),
+        "generated_date_jst": dt_jst.strftime("%Y-%m-%d"),
+        "generated_datetime_jst": dt_jst.strftime("%Y-%m-%d %H:%M:%S"),
         "pair": pair_to_csv(pair),
         "weekly_trend": "", "daily_trend": "", "alignment": "",
         "close_price": "", "daily_ema20": "", "weekly_ema20": "", "atr14": "",
