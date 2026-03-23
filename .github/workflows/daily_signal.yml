@@ -3,9 +3,16 @@ name: Daily Signal - D1/W1 EMA20 Pullback Strategy
 # 日足確定後に日次1回実行
 # Forex daily bar closes at 17:00 ET = 22:00 UTC (standard) / 21:00 UTC (DST)
 # UTC 23:00 に実行し、bar_checker で最新日足更新を確認する
+#
+# スケジュール対応表:
+#   UTC Sun 23:00 = JST Mon 08:00  → 金曜日足チェック
+#   UTC Mon 23:00 = JST Tue 08:00  → 月曜日足チェック
+#   ...
+#   UTC Thu 23:00 = JST Fri 08:00  → 木曜日足チェック
+#   UTC Fri 23:00 = JST Sat 08:00  → 金曜日足チェック（週末前最終）
 on:
   schedule:
-    - cron: '0 23 * * 0-4'  # UTC Sun-Thu = JST Mon-Fri morning
+    - cron: '0 23 * * 0-5'  # UTC Sun-Fri = JST Mon-Sat morning
 
   workflow_dispatch:
     inputs:
@@ -75,42 +82,81 @@ jobs:
             --config config/minnafx.yaml \
             $(if [ "${DRY_RUN}" = "true" ]; then echo "--dry-run"; fi)
 
-      - name: Build daily summary
+      - name: Build daily summary (local backup)
         if: success()
         run: python scripts/build_daily_summary.py
 
-      - name: Build GAS payload
+      - name: Build GAS payload (JSON generation only)
         if: success()
         env:
           GAS_SECRET: ${{ secrets.GAS_SECRET }}
         run: python scripts/build_gas_payload.py
 
       - name: Send to GAS Webhook
+        id: gas_send
         if: success()
         continue-on-error: true
         env:
           GAS_WEBHOOK_URL: ${{ secrets.GAS_WEBHOOK_URL }}
         run: |
+          GAS_RESULT="skipped"
+
           if [ -z "${GAS_WEBHOOK_URL}" ]; then
-            echo "WARN: GAS_WEBHOOK_URL not set, skipping"
+            echo "::warning::GAS_WEBHOOK_URL not set, skipping"
+            GAS_RESULT="skipped: no URL"
           elif [ ! -f data/gas_payload.json ]; then
-            echo "WARN: gas_payload.json not found, skipping"
+            echo "::warning::gas_payload.json not found, skipping"
+            GAS_RESULT="skipped: no payload"
           else
-            HTTP_STATUS=$(curl -s -o /tmp/gas_response.txt -w "%{http_code}" \
-              -X POST "${GAS_WEBHOOK_URL}" \
-              -H "Content-Type: application/json" \
-              -d @data/gas_payload.json \
-              --max-time 30 \
-              --retry 2 \
-              --retry-delay 5)
-            echo "GAS response: HTTP ${HTTP_STATUS}"
-            cat /tmp/gas_response.txt || true
-            if [ "${HTTP_STATUS}" -ge 200 ] && [ "${HTTP_STATUS}" -lt 300 ]; then
-              echo "GAS送信成功"
-            else
-              echo "WARN: GAS returned HTTP ${HTTP_STATUS} (fail-soft)"
+            # POST with retry (max 3 attempts, 5s backoff)
+            for ATTEMPT in 1 2 3; do
+              HTTP_STATUS=$(curl -s -o /tmp/gas_response.txt -w "%{http_code}" \
+                -X POST "${GAS_WEBHOOK_URL}" \
+                -H "Content-Type: application/json" \
+                -d @data/gas_payload.json \
+                --max-time 30)
+
+              RESPONSE_BODY=$(cat /tmp/gas_response.txt 2>/dev/null || echo "")
+              echo "Attempt ${ATTEMPT}: HTTP ${HTTP_STATUS} | Body: ${RESPONSE_BODY}"
+
+              # 成功判定: 2xx + レスポンス本文に OK を含む
+              if [ "${HTTP_STATUS}" -ge 200 ] 2>/dev/null && [ "${HTTP_STATUS}" -lt 300 ] 2>/dev/null; then
+                if echo "${RESPONSE_BODY}" | grep -qi "OK"; then
+                  echo "GAS送信成功"
+                  GAS_RESULT="success"
+                  break
+                elif echo "${RESPONSE_BODY}" | grep -qi "Unauthorized"; then
+                  echo "::warning::GAS returned Unauthorized — check GAS_SECRET"
+                  GAS_RESULT="error: Unauthorized"
+                  break
+                elif echo "${RESPONSE_BODY}" | grep -qi "ERROR"; then
+                  echo "::warning::GAS returned error: ${RESPONSE_BODY}"
+                  GAS_RESULT="error: ${RESPONSE_BODY}"
+                  break
+                else
+                  echo "::warning::GAS returned 2xx but unexpected body: ${RESPONSE_BODY}"
+                  GAS_RESULT="warning: unexpected response"
+                  break
+                fi
+              else
+                echo "::warning::GAS returned HTTP ${HTTP_STATUS}"
+                GAS_RESULT="error: HTTP ${HTTP_STATUS}"
+              fi
+
+              if [ "${ATTEMPT}" -lt 3 ]; then
+                WAIT=$((5 * ATTEMPT))
+                echo "  Retrying in ${WAIT}s..."
+                sleep ${WAIT}
+              fi
+            done
+
+            if [ "${GAS_RESULT}" = "skipped" ] || echo "${GAS_RESULT}" | grep -q "^error: HTTP"; then
+              GAS_RESULT="failed after 3 retries (HTTP ${HTTP_STATUS})"
+              echo "::warning::GAS送信: 3回リトライ後も失敗（fail-soft: 処理続行）"
             fi
           fi
+
+          echo "gas_result=${GAS_RESULT}" >> $GITHUB_OUTPUT
 
       - name: Commit output files
         if: always()
@@ -118,8 +164,8 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          # signals.csv, error_log.csv, daily_state.json, forward_test_log.csv, daily_signal_log.csv, reports
-          git add -f data/signals.csv data/error_log.csv data/daily_state.json data/forward_test_log.csv data/daily_signal_log.csv data/reports/ 2>/dev/null || true
+          git add -f data/signals.csv data/error_log.csv data/daily_state.json \
+            data/forward_test_log.csv data/daily_signal_log.csv data/reports/ 2>/dev/null || true
 
           if git diff --staged --quiet; then
             echo "No changes to commit"
@@ -156,3 +202,4 @@ jobs:
           echo "- **Strategy**: D1_W1_EMA20_PULLBACK_V1" >> $GITHUB_STEP_SUMMARY
           echo "- **Status**: ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Dry Run**: ${{ github.event.inputs.dry_run || 'false' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **GAS送信**: ${{ steps.gas_send.outputs.gas_result || 'not run' }}" >> $GITHUB_STEP_SUMMARY

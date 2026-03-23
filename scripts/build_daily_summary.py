@@ -1,8 +1,14 @@
 #!/usr/bin/env python3
 """
-日次サマリーをローカルテキストファイルとして出力する。
-GAS Webhook 経由で Google Docs に反映する構成のため、
-このスクリプトは ローカル保存 + 標準出力 のみ。
+日次サマリーを data/reports/ にローカル保存する。
+
+役割:
+  1. NotebookLM 向け整形テキストの生成
+  2. GAS Webhook 失敗時のバックアップ資料
+  3. git commit で履歴として蓄積（GitHub上で閲覧可能）
+
+Google API には一切依存しない。
+Sheets/Docs 更新は GAS Webhook 側で行う。
 
 使い方:
     python scripts/build_daily_summary.py
@@ -37,7 +43,8 @@ def get_today_jst() -> str:
 
 
 def save_local_summary(text: str, date_jst: str) -> Path:
-    """ローカルにテキストファイルとして保存する。"""
+    """data/reports/ にテキストファイルとして保存する。
+    GAS 失敗時のバックアップとして git commit 対象にもなる。"""
     REPORTS_DIR.mkdir(parents=True, exist_ok=True)
     filepath = REPORTS_DIR / f"daily_summary_{date_jst}.txt"
     filepath.write_text(text, encoding="utf-8")
@@ -46,9 +53,11 @@ def save_local_summary(text: str, date_jst: str) -> Path:
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Build daily summary for NotebookLM")
+    parser = argparse.ArgumentParser(
+        description="Build daily summary (local backup + GAS fallback)"
+    )
     parser.add_argument("--date", type=str, default=None, help="対象日 (YYYY-MM-DD JST)")
-    parser.add_argument("--dry-run", action="store_true", help="テキスト生成のみ（保存しない）")
+    parser.add_argument("--dry-run", action="store_true", help="標準出力のみ（ファイル保存しない）")
     args = parser.parse_args()
 
     date_jst = args.date or get_today_jst()
@@ -65,11 +74,9 @@ def main():
 
     recent_rows = filter_recent_days(all_rows, date_jst, days=5)
 
-    # run_id / version は最初の行から取得
     run_id = today_rows[0].get("run_id", "")
     version = today_rows[0].get("version", "")
 
-    # テキスト生成
     text = render_daily_summary_text(
         date_jst=date_jst,
         today_rows=today_rows,
@@ -79,11 +86,10 @@ def main():
     )
 
     if args.dry_run:
-        logger.info("[DRY-RUN] 生成テキスト:")
         print(text)
         return
 
-    # ローカル保存
+    # ローカル保存（常に実行 — GAS失敗時のバックアップ）
     save_local_summary(text, date_jst)
     print(text)
     logger.info("完了")
