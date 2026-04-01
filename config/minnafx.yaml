@@ -4,7 +4,7 @@ timezone: Asia/Tokyo
 
 # D1/W1 戦略パラメータ
 strategy:
-  pairs: ["USD/JPY", "AUD/JPY"]
+  pairs: ["USD/JPY", "AUD/JPY", "AUD/USD"]
   risk_pct: 0.005          # 0.5% per trade
   tp1_r: 1.5               # TP1 = 1.5R (50%利確)
   tp2_r: 3.0               # TP2 = 3.0R (残50%利確)
@@ -81,6 +81,12 @@ spread:
       fixed: 0.9
       widened: 14.9
     "AUD/JPY":
+      fixed: 0.4
+      widened: 8.9
+    "EUR/USD":
+      fixed: 0.3
+      widened: 3.9
+    "AUD/USD":
       fixed: 0.4
       widened: 8.9
 

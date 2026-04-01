@@ -24,7 +24,7 @@ from src.daily_strategy.report_output import write_daily_report
 from src.daily_strategy.notifier import send_daily_notification
 from src.daily_strategy.bar_checker import load_daily_state, save_daily_state
 
-PAIRS = ["USD/JPY", "AUD/JPY"]
+PAIRS = ["USD/JPY", "AUD/JPY", "AUD/USD"]
 
 
 def parse_args():

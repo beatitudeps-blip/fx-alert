@@ -1,5 +1,5 @@
 """
-最終バックテスト: USD/JPY + AUD/JPY
+最終バックテスト: USD/JPY + AUD/JPY + EUR/USD + AUD/USD
 ATR指値エントリー(0.25*ATR) + EMA距離フィルター(0.2-1.2*ATR)
 TP1=1.5R / TP2=3.0R / spread=0.05R / slippage=0.05R
 """
@@ -114,9 +114,25 @@ def check_signal(d1, w1):
             "signal_date": str(d1["datetime"].iloc[-1])}
 
 
-def run(sym, d1, w1):
+def _is_jpy_cross(sym: str) -> bool:
+    """JPYクロスかどうかを判定する。"""
+    return "JPY" in sym.replace("/", "")
+
+
+def _risk_to_jpy(risk_price: float, sym: str, usdjpy_rate: float) -> float:
+    """非JPYクロスのリスク（USD建て）をJPYに変換する。
+    JPYクロスの場合は risk_price がそのまま JPY/unit。
+    非JPYクロス（xxxUSD）の場合は risk_price * usdjpy_rate。
+    """
+    if _is_jpy_cross(sym):
+        return risk_price  # already JPY per unit
+    return risk_price * usdjpy_rate
+
+
+def run(sym, d1, w1, usdjpy_d1=None):
     trades, eq, active = [], EQUITY, None
     skips = {}
+    is_jpy = _is_jpy_cross(sym)
 
     for i in range(30, len(d1)):
         dt = d1["datetime"].iloc[i]
@@ -194,16 +210,28 @@ def run(sym, d1, w1):
             for r in sig["reason_codes"]: skips[r] = skips.get(r, 0) + 1
         elif sig["decision"] == "ENTRY_OK":
             rj = eq * RISK_PCT
-            u = rj / sig["risk_price"] if sig["risk_price"] > 0 else 0
+            # 非JPYクロスではリスクをJPY換算
+            if is_jpy:
+                risk_jpy_per_unit = sig["risk_price"]
+            else:
+                # usdjpy_d1 から当日レートを取得
+                usdjpy_rate = 110.0  # fallback
+                if usdjpy_d1 is not None:
+                    mask = usdjpy_d1["datetime"] <= dt
+                    if mask.any():
+                        usdjpy_rate = float(usdjpy_d1.loc[mask, "close"].iloc[-1])
+                risk_jpy_per_unit = sig["risk_price"] * usdjpy_rate
+            u = rj / risk_jpy_per_unit if risk_jpy_per_unit > 0 else 0
             u = (u // 100) * 100
             if u < 100:
                 skips["SIZE"] = skips.get("SIZE", 0) + 1; continue
-            arj = u * sig["risk_price"]
+            arj = u * risk_jpy_per_unit
             cost = arj * (SPREAD_R + SLIP_R)
             active = {"symbol": sym, "side": sig["side"], "entry": sig["entry"],
                       "sl": sig["sl"], "tp1": sig["tp1"], "tp2": sig["tp2"],
                       "csl": sig["sl"], "risk_price": sig["risk_price"],
                       "rj": arj, "cost": cost, "units": u,
+                      "risk_jpy_per_unit": risk_jpy_per_unit,
                       "entry_date": str(dt), "pattern": sig["pattern"],
                       "tp1d": False, "tp1p": 0.0, "holding_days": 0}
 
@@ -249,7 +277,7 @@ def metrics(trades, init_eq, yrs):
 if __name__ == "__main__":
     api_key = check_api_key(required=True)
     yrs = (pd.to_datetime(END) - pd.to_datetime(START)).days / 365.25
-    pairs = ["USD/JPY", "AUD/JPY"]
+    pairs = ["USD/JPY", "AUD/JPY", "AUD/USD"]
 
     print(f"\n{'='*80}")
     print(f"FINAL BACKTEST")
@@ -266,13 +294,17 @@ if __name__ == "__main__":
     print(f"Equity:   {EQUITY:,.0f} JPY")
     print(f"{'='*80}\n")
 
+    # 非JPYクロスのPnL計算にUSDJPYレートが必要
+    ws = (datetime.strptime(START, "%Y-%m-%d") - timedelta(days=90)).strftime("%Y-%m-%d")
+    usdjpy_d1 = fetch_data_range("USD/JPY", "1day", ws, END, api_key)
+    print(f"USDJPY reference data: {len(usdjpy_d1)} bars\n")
+
     all_trades = []
     for pair in pairs:
-        ws = (datetime.strptime(START, "%Y-%m-%d") - timedelta(days=90)).strftime("%Y-%m-%d")
         d1 = fetch_data_range(pair, "1day", ws, END, api_key)
         w1 = fetch_data_range(pair, "1week", ws, END, api_key)
 
-        tr, eq, sk = run(pair, d1, w1)
+        tr, eq, sk = run(pair, d1, w1, usdjpy_d1=usdjpy_d1 if not _is_jpy_cross(pair) else None)
         m = metrics(tr, EQUITY, yrs)
         cl = [t for t in tr if t.get("exit_reason") != "OPEN"]
         er = {}
