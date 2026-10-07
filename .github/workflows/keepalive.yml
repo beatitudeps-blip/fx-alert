@@ -1,0 +1,41 @@
+name: Keepalive
+
+# GitHub は公開リポジトリで 60 日間アクティビティが無いと schedule ワークフローを自動停止する
+# （2026-08-21〜10-07 に daily_signal.yml が disabled_inactivity で停止した）。
+# 月1回、空コミットでアクティビティを作り、daily_signal.yml を念のため再有効化する。
+on:
+  schedule:
+    - cron: '0 0 1 * *'  # 毎月1日 UTC 00:00 = JST 09:00
+  workflow_dispatch:
+
+concurrency:
+  group: keepalive
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  keepalive:
+    name: Keepalive commit & re-enable
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Re-enable daily signal workflow
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # 有効なワークフローに対しても成功する（冪等）
+          gh api -X PUT "repos/${{ github.repository }}/actions/workflows/daily_signal.yml/enable"
+
+      - name: Empty keepalive commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit --allow-empty -m "chore: keepalive [skip ci]"
+          git push
