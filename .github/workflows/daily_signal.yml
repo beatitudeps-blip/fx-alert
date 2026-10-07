@@ -86,15 +86,20 @@ jobs:
         if: success()
         run: python scripts/build_daily_summary.py
 
+      # dry_run 時はペイロードを標準出力に出すだけで保存・送信しない
+      # （GAS_SECRET がログに出ないよう、dry_run 時は token を渡さない）
       - name: Build GAS payload (JSON generation only)
         if: success()
         env:
-          GAS_SECRET: ${{ secrets.GAS_SECRET }}
-        run: python scripts/build_gas_payload.py
+          DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
+          GAS_SECRET: ${{ github.event.inputs.dry_run != 'true' && secrets.GAS_SECRET || '' }}
+        run: |
+          python scripts/build_gas_payload.py \
+            $(if [ "${DRY_RUN}" = "true" ]; then echo "--dry-run"; fi)
 
       - name: Send to GAS Webhook
         id: gas_send
-        if: success()
+        if: success() && github.event.inputs.dry_run != 'true'
         continue-on-error: true
         env:
           GAS_WEBHOOK_URL: ${{ secrets.GAS_WEBHOOK_URL }}
